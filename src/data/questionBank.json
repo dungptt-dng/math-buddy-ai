@@ -1,0 +1,20 @@
+{
+  "note": "NGÂN HÀNG CÓ SẴN – câu hỏi soạn sẵn, đáp án được chương trình tự tính lại bằng validateQuestion trước khi dùng.",
+  "warmup": [
+    { "id": "bank-w1", "lessonId": "numbers-0-10", "type": "count", "item": "star", "count": 4, "prompt": "Có bao nhiêu ngôi sao?", "options": [3, 4, 5] },
+    { "id": "bank-w2", "lessonId": "addition-10", "type": "add", "item": "apple", "a": 2, "b": 3, "prompt": "2 + 3 = ?", "options": [5, 4, 6] },
+    { "id": "bank-w3", "lessonId": "plane-shapes", "type": "shape", "mode": "name", "shape": "circle", "prompt": "Đây là hình gì?", "options": ["square", "circle", "triangle"] },
+    { "id": "bank-w4", "lessonId": "subtraction-10", "type": "sub", "item": "balloon", "a": 6, "b": 2, "prompt": "6 - 2 = ?", "options": [3, 4, 8] },
+    { "id": "bank-w5", "lessonId": "compare-0-10", "type": "compare", "item": "fish", "a": 7, "b": 5, "prompt": "So sánh: 7 ... 5", "options": ["<", ">", "="] }
+  ],
+  "practice": [
+    { "id": "bank-p1", "lessonId": "numbers-0-10", "type": "count", "item": "flower", "count": 8, "prompt": "Có bao nhiêu bông hoa?", "options": [7, 8, 9] },
+    { "id": "bank-p2", "lessonId": "addition-10", "type": "add", "item": "fish", "a": 4, "b": 4, "prompt": "4 + 4 = ?", "options": [8, 7, 9] },
+    { "id": "bank-p3", "lessonId": "subtraction-10", "type": "sub", "item": "apple", "a": 9, "b": 3, "prompt": "9 - 3 = ?", "options": [5, 6, 7] },
+    { "id": "bank-p4", "lessonId": "plane-shapes", "type": "shape", "mode": "find", "shape": "triangle", "prompt": "Bé hãy chọn hình tam giác.", "options": ["circle", "triangle", "rectangle"] },
+    { "id": "bank-p5", "lessonId": "compare-0-10", "type": "compare", "item": "star", "a": 3, "b": 3, "prompt": "So sánh: 3 ... 3", "options": ["<", ">", "="] },
+    { "id": "bank-p6", "lessonId": "addition-10", "type": "add", "item": "balloon", "a": 5, "b": 0, "prompt": "5 + 0 = ?", "options": [0, 5, 6] },
+    { "id": "bank-p7", "lessonId": "plane-shapes", "type": "shape", "mode": "name", "shape": "rectangle", "prompt": "Đây là hình gì?", "options": ["rectangle", "square", "circle"] },
+    { "id": "bank-p8", "lessonId": "compare-0-10", "type": "compare", "item": "apple", "a": 2, "b": 6, "prompt": "So sánh: 2 ... 6", "options": ["<", ">", "="] }
+  ]
+}

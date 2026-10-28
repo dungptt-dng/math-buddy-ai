@@ -1,0 +1,104 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply font-sans text-ink antialiased;
+    min-height: 100vh;
+    background:
+      radial-gradient(1200px 600px at 10% -10%, #dff0ff 0%, transparent 60%),
+      radial-gradient(900px 600px at 100% 0%, #ece4ff 0%, transparent 55%),
+      radial-gradient(900px 700px at 50% 110%, #e3f8ef 0%, transparent 60%),
+      #f5f9ff;
+    background-attachment: fixed;
+  }
+  button {
+    -webkit-tap-highlight-color: transparent;
+  }
+  :focus-visible {
+    outline: 3px solid #287fc1;
+    outline-offset: 3px;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex min-h-[48px] items-center justify-center gap-2 rounded-2xl px-5 py-3 text-base font-extrabold transition
+      active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply btn bg-deep text-white shadow-soft hover:bg-[#1f6fab];
+  }
+  .btn-sun {
+    @apply btn bg-sunshine text-ink shadow-card hover:brightness-95;
+  }
+  .btn-soft {
+    @apply btn border-2 border-primary/30 bg-white text-deep hover:border-primary hover:bg-primary/5;
+  }
+  .btn-ghost {
+    @apply btn bg-transparent text-deep hover:bg-primary/10;
+  }
+  .card {
+    @apply rounded-3xl bg-white shadow-card;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-extrabold tracking-wide;
+  }
+  .input {
+    @apply w-full rounded-2xl border-2 border-primary/30 bg-white px-4 py-3 text-lg font-bold text-ink outline-none
+      placeholder:font-semibold placeholder:text-ink/35 focus:border-deep;
+  }
+}
+
+/* Chuyển động nhẹ cho Buddy – luôn dùng chung một ảnh gốc */
+@keyframes buddy-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+@keyframes buddy-bounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  30% { transform: translateY(-16px) scale(1.03); }
+  60% { transform: translateY(0) scale(0.98, 1.02); }
+}
+@keyframes buddy-tilt {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-5deg); }
+}
+@keyframes buddy-nod {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  25% { transform: translateY(2px) rotate(3deg); }
+  75% { transform: translateY(2px) rotate(-3deg); }
+}
+@keyframes pop-in {
+  0% { transform: scale(0.6); opacity: 0; }
+  70% { transform: scale(1.06); opacity: 1; }
+  100% { transform: scale(1); }
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
+}
+@keyframes sparkle {
+  0% { transform: scale(0) rotate(0); opacity: 0; }
+  50% { transform: scale(1) rotate(90deg); opacity: 1; }
+  100% { transform: scale(0) rotate(180deg); opacity: 0; }
+}
+.anim-float { animation: buddy-float 3.2s ease-in-out infinite; }
+.anim-bounce { animation: buddy-bounce 0.9s ease-in-out 2; }
+.anim-cheer { animation: buddy-bounce 0.7s ease-in-out infinite; }
+.anim-think { animation: buddy-tilt 2.4s ease-in-out infinite; transform-origin: 50% 90%; }
+.anim-nod { animation: buddy-nod 1.4s ease-in-out 2; transform-origin: 50% 90%; }
+.anim-pop { animation: pop-in 0.45s ease-out both; }
+.anim-shake { animation: shake 0.35s ease-in-out 2; }
+.sparkle { animation: sparkle 1.4s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-float, .anim-bounce, .anim-cheer, .anim-think, .anim-nod, .anim-pop, .anim-shake, .sparkle {
+    animation: none !important;
+  }
+}

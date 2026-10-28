@@ -1,0 +1,10 @@
+node_modules
+dist
+.env
+server/data/
+*.log
+XUAT_BAN
+.claude/
+# Tài liệu và ảnh gốc ban đầu (ảnh đã được đưa vào public/images)
+LENH.docx
+/*.jpg

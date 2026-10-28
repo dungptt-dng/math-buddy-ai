@@ -1,0 +1,45 @@
+{
+  "note": "Các chủ đề được đặt tên mô tả theo định hướng nội dung SGK Toán 1 – bộ Kết nối tri thức với cuộc sống. Đây KHÔNG phải tên bài hoặc số thứ tự bài chính thức trong sách.",
+  "lessons": [
+    {
+      "id": "numbers-0-10",
+      "title": "Các số từ 0 đến 10",
+      "skill": "Nhận biết, đếm số lượng đồ vật trong phạm vi 10",
+      "types": ["count"],
+      "english": "Số đếm tiếng Anh: zero – ten",
+      "activity": "magic-numbers"
+    },
+    {
+      "id": "compare-0-10",
+      "title": "So sánh các số trong phạm vi 10",
+      "skill": "So sánh hai số, dùng dấu >, <, =",
+      "types": ["compare"],
+      "english": "greater than, less than, equal",
+      "activity": "buddy-challenge"
+    },
+    {
+      "id": "addition-10",
+      "title": "Phép cộng trong phạm vi 10",
+      "skill": "Gộp hai nhóm đồ vật, cộng hai số có tổng không quá 10",
+      "types": ["add"],
+      "english": "plus, số đếm tiếng Anh",
+      "activity": "math-garden"
+    },
+    {
+      "id": "subtraction-10",
+      "title": "Phép trừ trong phạm vi 10",
+      "skill": "Bớt đi một số đồ vật, trừ hai số trong phạm vi 10",
+      "types": ["sub"],
+      "english": "minus, số đếm tiếng Anh",
+      "activity": "math-garden"
+    },
+    {
+      "id": "plane-shapes",
+      "title": "Làm quen với một số hình phẳng",
+      "skill": "Nhận biết hình vuông, hình tròn, hình tam giác, hình chữ nhật",
+      "types": ["shape"],
+      "english": "square, circle, triangle, rectangle",
+      "activity": "shape-hunt"
+    }
+  ]
+}
