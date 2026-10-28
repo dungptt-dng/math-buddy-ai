@@ -11,6 +11,7 @@ import { ShapeIcon } from './Illustrations'
 import { checkAnswer, ITEM_EN_PLURAL, ITEM_VI, NUMBER_EN, SHAPE_VI } from '../utils/validateQuestion'
 import { getStudentCode, recordAnswer, recordListen, saveRound } from '../services/storage'
 import { speak } from '../services/speech'
+import { playCorrect, playTryAgain } from '../services/sound'
 import { useStudentCode } from '../hooks/useStudentCode'
 
 export interface LoadedRound {
@@ -152,6 +153,7 @@ export default function GameScreen({ activity, title, badge, intro, load }: Prop
       setResults((r) => [...r, attempts === 1])
       if (q.englishWord) setWords((w) => (w.includes(q.englishWord!) ? w : [...w, q.englishWord!]))
       setBuddy({ mood: 'happy', text: fb.vi })
+      playCorrect()
       speak(fb.vi.split('Tiếng Anh')[0])
       if (fb.en) speak(fb.en, 'en-US', true)
       recordAnswer({
@@ -166,6 +168,7 @@ export default function GameScreen({ activity, title, badge, intro, load }: Prop
       })
     } else {
       setWrong((w) => [...w, option])
+      playTryAgain()
       const text = hintFor(q)
       setBuddy({ mood: 'encourage', text })
       speak(text)

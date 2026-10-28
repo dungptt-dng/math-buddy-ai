@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import BuddyMascot from './BuddyMascot'
 import { speak } from '../services/speech'
+import { playCelebrate } from '../services/sound'
 
 interface Props {
   stars: number
@@ -25,7 +26,9 @@ export default function RewardPanel({ stars, badge, correctFirstTry, total, engl
   const message = `${praise} Bé nhận được ${stars} ngôi sao và ${badge}!`
 
   useEffect(() => {
-    speak(message)
+    playCelebrate()
+    const id = window.setTimeout(() => speak(message), 1200)
+    return () => window.clearTimeout(id)
   }, [message])
 
   return (

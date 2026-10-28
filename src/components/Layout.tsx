@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useOutletContext } from 'react-router-dom'
-import { BUDDY_SRC } from './BuddyMascot'
+import { BUDDY_SRC, SpeakerIcon } from './BuddyMascot'
 import HelpModal from './HelpModal'
+import IntroScreen from './IntroScreen'
 import Modal from './Modal'
 import { useStudentCode } from '../hooks/useStudentCode'
+import { useMuted } from '../hooks/useMuted'
 import { syncPending } from '../services/storage'
 import { STATIC_MODE } from '../config'
 
@@ -14,8 +16,25 @@ interface LayoutContext {
 }
 export const useLayout = () => useOutletContext<LayoutContext>()
 
+const INTRO_KEY = 'mathBuddy.introSeen'
+function introSeen() {
+  try {
+    return sessionStorage.getItem(INTRO_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+function markIntroSeen() {
+  try {
+    sessionStorage.setItem(INTRO_KEY, '1')
+  } catch {
+    /* bỏ qua */
+  }
+}
+
 function Header({ onHelp }: { onHelp: () => void }) {
   const code = useStudentCode()
+  const [muted, toggleMute] = useMuted()
   return (
     <header className="flex flex-wrap items-center justify-between gap-3 px-1 pb-4 sm:px-2">
       <Link to="/" className="flex items-center gap-3" aria-label="Math Buddy AI – về trang chủ">
@@ -34,6 +53,18 @@ function Header({ onHelp }: { onHelp: () => void }) {
             {code}
           </NavLink>
         )}
+        <button
+          type="button"
+          onClick={toggleMute}
+          className="btn-ghost min-h-[44px] px-3 py-2 text-sm"
+          aria-label={muted ? 'Bật âm thanh' : 'Tắt âm thanh'}
+          title={muted ? 'Bật âm thanh' : 'Tắt âm thanh'}
+        >
+          <span className={`flex h-6 w-6 items-center justify-center rounded-full ${muted ? 'bg-ink/10 text-ink/50' : 'bg-primary/15 text-deep'}`}>
+            {muted ? '✕' : <SpeakerIcon className="h-3.5 w-3.5" />}
+          </span>
+          <span className="hidden lg:inline">{muted ? 'Đang tắt tiếng' : 'Âm thanh'}</span>
+        </button>
         <button type="button" onClick={onHelp} className="btn-ghost min-h-[44px] px-3 py-2 text-sm">
           <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/15 text-deep">?</span>
           <span className="hidden sm:inline">Trợ giúp</span>
@@ -47,7 +78,7 @@ function Header({ onHelp }: { onHelp: () => void }) {
   )
 }
 
-function Footer({ onPrivacy }: { onPrivacy: () => void }) {
+function Footer({ onPrivacy, onIntro }: { onPrivacy: () => void; onIntro: () => void }) {
   return (
     <footer className="mt-8 flex flex-col items-center gap-3 border-t border-primary/10 pt-6 text-center">
       <p className="text-base font-extrabold text-ink">Math Buddy AI – Cùng bé học tập, khám phá và tiến bộ mỗi ngày.</p>
@@ -55,6 +86,9 @@ function Footer({ onPrivacy }: { onPrivacy: () => void }) {
         <Link to="/giao-vien" className="underline-offset-4 hover:text-deep hover:underline">
           Góc giáo viên
         </Link>
+        <button type="button" onClick={onIntro} className="underline-offset-4 hover:text-deep hover:underline">
+          Màn hình chào
+        </button>
         <button type="button" onClick={onPrivacy} className="underline-offset-4 hover:text-deep hover:underline">
           Quyền riêng tư
         </button>
@@ -68,6 +102,8 @@ export default function Layout() {
   const [help, setHelp] = useState(false)
   const [privacy, setPrivacy] = useState(false)
   const { pathname } = useLocation()
+  // Màn hình chào hiện một lần mỗi phiên khi mở trang chủ (không chặn link sâu như Góc giáo viên).
+  const [intro, setIntro] = useState(() => pathname === '/' && !introSeen())
 
   useEffect(() => {
     window.scrollTo({ top: 0 })
@@ -87,8 +123,16 @@ export default function Layout() {
         <main>
           <Outlet context={{ openHelp: () => setHelp(true) } satisfies LayoutContext} />
         </main>
-        <Footer onPrivacy={() => setPrivacy(true)} />
+        <Footer onPrivacy={() => setPrivacy(true)} onIntro={() => setIntro(true)} />
       </div>
+      {intro && (
+        <IntroScreen
+          onDone={() => {
+            markIntroSeen()
+            setIntro(false)
+          }}
+        />
+      )}
       <HelpModal open={help} onClose={() => setHelp(false)} />
       <Modal open={privacy} onClose={() => setPrivacy(false)} title="Quyền riêng tư">
         <ul className="list-disc space-y-2 pl-5 text-[15px] font-semibold text-ink/80">

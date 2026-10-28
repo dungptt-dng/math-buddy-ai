@@ -84,6 +84,13 @@ src/utils/                validateQuestion.ts, generators.ts
 ## Chức năng đã triển khai
 
 **Học sinh**
+- **Màn hình mở đầu** (`src/components/IntroScreen.tsx`): chính là banner chính thức, hiển thị nguyên ảnh, đúng tỷ lệ, không cắt,
+  trên nền là bản phóng mờ của banner. Các vùng chạm trong suốt nằm đúng trên từng hình (Buddy, mặt trời, ngôi sao, số 1–2–3,
+  hình khối, quả táo, sách, 3 thẻ tính năng, bảng gỗ, trường học): chạm để nghe âm thanh và giọng đọc Việt – Anh.
+  Bấm “Bắt đầu” phát nhạc chào, pháo giấy và Buddy nói lời chào. Hiện một lần mỗi phiên khi mở trang chủ,
+  xem lại bằng link “Màn hình chào” ở chân trang.
+- Âm thanh (`src/services/sound.ts`) được tổng hợp bằng Web Audio API, không cần file nhạc: nhạc chào, tiếng đúng/sai nhẹ nhàng,
+  nhạc nhận thưởng. Nút **Âm thanh** trên thanh đầu trang bật/tắt toàn bộ âm thanh và giọng đọc.
 - Trang chủ theo banner: thanh đầu trang, banner gốc, khu chào đón 2 cột (mã học sinh `HS-012`, Bắt đầu học, Xem tiến độ, Hướng dẫn chơi), thẻ Buddy có nút nghe lời chào, 4 thẻ hoạt động, chân trang.
 - **Bé đếm cùng Buddy** – đếm 1–10 đồ vật, 3 phương án; sai thì Buddy hướng dẫn chạm vào từng đồ vật để đếm lại; đúng thì Buddy khen và dạy số đếm tiếng Anh.
 - **Khu vườn phép tính** – cộng/trừ trong phạm vi 10 có minh họa đồ vật, đáp án do chương trình tính.

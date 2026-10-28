@@ -1,9 +1,11 @@
 // Đọc to bằng giọng nói của trình duyệt (Web Speech API), nếu được hỗ trợ.
+import { isMuted } from './sound'
+
 export const speechSupported = () => typeof window !== 'undefined' && 'speechSynthesis' in window
 
 /** queue = true: đọc nối tiếp sau câu đang đọc thay vì ngắt ngang. */
 export function speak(text: string, lang: 'vi-VN' | 'en-US' = 'vi-VN', queue = false): boolean {
-  if (!speechSupported()) return false
+  if (!speechSupported() || isMuted()) return false
   const synth = window.speechSynthesis
   if (!queue) synth.cancel()
   const u = new SpeechSynthesisUtterance(text)
