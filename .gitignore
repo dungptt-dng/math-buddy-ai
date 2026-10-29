@@ -1,10 +1,11 @@
-node_modules
-dist
-.env
+node_modules/
+dist/
 server/data/
+.env
 *.log
-XUAT_BAN
+*.tsbuildinfo
 .claude/
-# Tài liệu và ảnh gốc ban đầu (ảnh đã được đưa vào public/images)
-LENH.docx
+# Tài liệu và ảnh gốc ở thư mục gốc (ảnh đã có bản tối ưu trong client/public/assets)
+/*.docx
+/~$*
 /*.jpg

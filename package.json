@@ -1,31 +1,23 @@
 {
   "name": "math-buddy-ai",
+  "version": "0.1.0",
   "private": true,
-  "version": "1.0.0",
-  "description": "Math Buddy AI – Bé vui học Toán song ngữ (học sinh lớp 1)",
-  "type": "module",
+  "description": "Math Buddy AI – Bé vui học Toán song ngữ (ôn luyện Toán lớp 1, làm quen từ vựng tiếng Anh)",
+  "workspaces": [
+    "server",
+    "client"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "tsc --noEmit && vite build",
-    "build:pages": "tsc --noEmit && vite build && node -e \"require('fs').copyFileSync('dist/index.html','dist/404.html')\"",
-    "preview": "vite preview",
-    "start": "node server/index.mjs",
-    "typecheck": "tsc --noEmit"
-  },
-  "dependencies": {
-    "@anthropic-ai/sdk": "^1.3.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-router-dom": "^6.26.2"
+    "dev": "concurrently -n api,web -c blue,magenta \"npm run dev -w server\" \"npm run dev -w client\"",
+    "build": "npm run build -w client && npm run build -w server",
+    "start": "npm run start -w server",
+    "test": "npm test -w server",
+    "typecheck": "npm run typecheck -w server && npm run typecheck -w client"
   },
   "devDependencies": {
-    "@types/react": "^18.3.11",
-    "@types/react-dom": "^18.3.0",
-    "@vitejs/plugin-react": "^4.3.2",
-    "autoprefixer": "^10.4.20",
-    "postcss": "^8.4.47",
-    "tailwindcss": "^3.4.13",
-    "typescript": "^5.6.2",
-    "vite": "^5.4.8"
+    "concurrently": "^9.2.1"
+  },
+  "engines": {
+    "node": ">=22.13"
   }
 }
