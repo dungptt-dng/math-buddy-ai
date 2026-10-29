@@ -1,23 +1,32 @@
 {
   "name": "math-buddy-ai",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "Math Buddy AI – Bé vui học Toán song ngữ (ôn luyện Toán lớp 1, làm quen từ vựng tiếng Anh)",
-  "workspaces": [
-    "server",
-    "client"
-  ],
+  "type": "module",
+  "description": "Math Buddy AI – Bé vui học Toán song ngữ (ôn luyện Toán lớp 1, làm quen từ vựng tiếng Anh). Ứng dụng tĩnh, chạy hoàn toàn trong trình duyệt.",
   "scripts": {
-    "dev": "concurrently -n api,web -c blue,magenta \"npm run dev -w server\" \"npm run dev -w client\"",
-    "build": "npm run build -w client && npm run build -w server",
-    "start": "npm run start -w server",
-    "test": "npm test -w server",
-    "typecheck": "npm run typecheck -w server && npm run typecheck -w client"
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "test": "node --import tsx --test \"test/**/*.test.ts\"",
+    "typecheck": "tsc -b"
+  },
+  "dependencies": {
+    "@fontsource/nunito": "^5.2.7",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router": "^7.9.4"
   },
   "devDependencies": {
-    "concurrently": "^9.2.1"
+    "@types/node": "^24.9.1",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "@vitejs/plugin-react": "^5.0.4",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.12"
   },
   "engines": {
-    "node": ">=22.13"
+    "node": ">=20.19"
   }
 }

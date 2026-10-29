@@ -1,11 +1,9 @@
 node_modules/
 dist/
-server/data/
-.env
 *.log
 *.tsbuildinfo
 .claude/
-# Tài liệu và ảnh gốc ở thư mục gốc (ảnh đã có bản tối ưu trong client/public/assets)
+# Tài liệu và ảnh gốc ở thư mục gốc (ảnh đã có bản tối ưu trong public/assets)
 /*.docx
 /~$*
 /*.jpg
