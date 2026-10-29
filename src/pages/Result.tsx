@@ -2,18 +2,23 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { BUDDY_IMG, Confetti, KidError, KidLayout, Loading } from '../components/Kid';
 import * as engine from '../engine';
-import { sfx, speak } from '../speech';
+import { sfx, speak, stopSpeaking, useSound } from '../speech';
 import type { Result as R } from '../types';
 
+// Phần thưởng trò chơi – lời Buddy nên bằng tiếng Anh.
+const s = (n: number) => (n === 1 ? '' : 's');
 const GAME_WORD: Record<string, { icon: string; text: (n: number) => string }> = {
-  'magic-numbers': { icon: '⭐', text: (n) => `Con đã thắp sáng ${n} ngôi sao!` },
-  'math-garden': { icon: '🌷', text: (n) => `Con đã trồng được ${n} bông hoa!` },
-  'shape-hunt': { icon: '🏅', text: (n) => `Con đã săn được ${n} huy hiệu hình!` },
+  'magic-numbers': { icon: '⭐', text: (n) => `You lit ${n} star${s(n)}!` },
+  'math-garden': { icon: '🌷', text: (n) => `You grew ${n} flower${s(n)}!` },
+  'shape-hunt': { icon: '🏅', text: (n) => `You won ${n} badge${s(n)}!` },
 };
+/** Chờ tiếng nhạc chúc mừng (khoảng 0,7 giây) kết thúc rồi Buddy mới nói. */
+const AFTER_WIN_MS = 800;
 
 export default function Result() {
   const { id } = useParams();
   const nav = useNavigate();
+  const [soundOn] = useSound();
   const [r, setR] = useState<R | null>(null);
   const [error, setError] = useState<engine.EngineError | null>(null);
   const [busy, setBusy] = useState(false);
@@ -21,15 +26,24 @@ export default function Result() {
   const load = useCallback(() => {
     setError(null);
     try {
-      const res = engine.result(Number(id));
-      setR(res);
+      setR(engine.result(Number(id)));
       sfx('win');
-      setTimeout(() => speak(res.buddy, 'en-US'), 600);
     } catch (e) {
       setError(e as engine.EngineError);
     }
   }, [id]);
   useEffect(load, [load]);
+
+  const gameLine = r?.gameId ? GAME_WORD[r.gameId]?.text(r.mathCorrect) : undefined;
+  const cheer = r ? [r.buddy, gameLine, r.praise].filter(Boolean).join(' ') : '';
+  useEffect(() => {
+    if (!cheer || !soundOn) return;
+    const t = setTimeout(() => speak(cheer, 'en-US'), AFTER_WIN_MS);
+    return () => {
+      clearTimeout(t);
+      stopSpeaking();
+    };
+  }, [cheer, soundOn]);
 
   const again = (target: { lessonId: string } | { gameId: string }) => {
     setBusy(true);
@@ -89,7 +103,7 @@ export default function Result() {
             ))}
           </div>
           {game ? (
-            <div className="score-big">
+            <div className="score-big" lang="en">
               <span className="emoji">{game.icon}</span> {game.text(correct)}
             </div>
           ) : (
@@ -98,7 +112,9 @@ export default function Result() {
             </div>
           )}
           <div className="score-sub">{english ? 'câu từ vựng đúng ngay lần đầu' : 'câu Toán đúng ngay lần đầu'}</div>
-          <p style={{ fontSize: 21, fontWeight: 800, margin: '12px 0 0' }}>{r.praise}</p>
+          <p lang="en" style={{ fontSize: 21, fontWeight: 800, margin: '12px 0 0' }}>
+            {r.praise}
+          </p>
 
           <div className="score-pills">
             {!english && (

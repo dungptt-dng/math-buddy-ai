@@ -48,9 +48,17 @@ export function speak(text: string, lang: 'vi-VN' | 'en-US', force = false) {
   u.pitch = 1.1;
   const v = pickVoice(lang);
   if (v) u.voice = v;
+  // Chỉ một giọng đọc tại một thời điểm: dừng câu đang đọc trước khi đọc câu mới.
   window.speechSynthesis.cancel();
   window.speechSynthesis.speak(u);
 }
+
+export function stopSpeaking() {
+  if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+}
+
+/** Chờ tiếng hiệu ứng ngắn kết thúc rồi mới đọc, để hai âm thanh không chồng lên nhau. */
+export const SFX_GAP_MS = 450;
 
 let ctx: AudioContext | null = null;
 function tone(freq: number, start: number, dur: number, type: OscillatorType = 'sine', gain = 0.12) {
@@ -75,8 +83,9 @@ export function sfx(kind: 'correct' | 'wrong' | 'tap' | 'win') {
       tone(660, 0, 0.15);
       tone(880, 0.12, 0.25);
     } else if (kind === 'wrong') {
-      tone(330, 0, 0.18, 'triangle', 0.08);
-      tone(262, 0.15, 0.25, 'triangle', 0.08);
+      // Âm nhẹ, đi lên ("thử lại nhé"), không phải tiếng báo lỗi.
+      tone(523, 0, 0.16, 'sine', 0.05);
+      tone(587, 0.13, 0.22, 'sine', 0.05);
     } else if (kind === 'tap') {
       tone(520, 0, 0.06, 'sine', 0.05);
     } else {

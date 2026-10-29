@@ -83,11 +83,30 @@ test/          Kiểm thử tự động
 
 **Chấm điểm**
 - Chấm **cố định** theo đáp án chuẩn; AI không tham gia chấm.
-- Mỗi câu được thử tối đa 2 lần.
+- Mỗi câu được trả lời tối đa 4 lần (xem phần Buddy bên dưới).
 - **Điểm chính = đúng ngay lần đầu.** Câu đúng sau khi thử lại được ghi riêng.
 - Câu trả lời không hợp lệ (ví dụ để trống) không bị tính là một lần thử.
 - Toán và từ vựng tiếng Anh được tính **tách riêng**: sai từ vựng không làm giảm điểm Toán.
-- Lời của Buddy chỉ dùng tiếng Anh đơn giản. Hướng dẫn Toán bằng tiếng Việt, ở khu vực riêng.
+- Lưu lại câu trả lời thật của con, số lần trả lời và số lần bấm Gợi ý.
+
+**Buddy luôn phản hồi bằng tiếng Anh**
+- Câu hỏi Toán và nút **Gợi ý** (con tự bấm trước khi trả lời) bằng tiếng Việt.
+- **Sau khi con trả lời**, mọi lời Buddy đều bằng tiếng Anh đơn giản, giống nhau ở mọi bài và mọi trò chơi: khen, động viên, gợi ý, thử lại, xem đáp án, phần thưởng trò chơi, chúc mừng khi xong bài. Có đọc to bằng giọng tiếng Anh nếu đang bật âm thanh.
+- Thứ tự luôn là: chấm trước → lưu kết quả → rồi mới chọn lời Buddy theo kết quả đó, nên lời Buddy không bao giờ trái với kết quả chấm.
+- Khi con trả lời sai, Buddy không chê và không nói ngay đáp án:
+
+  | Lần sai | Buddy nói (ví dụ) | Gợi ý bằng hình |
+  |---|---|---|
+  | 1 | “Good try! Let's try again.” + gợi ý nhẹ | Phương án đã chọn sai bị gạch đi |
+  | 2 | “Almost! Let's count together.” + gợi ý rõ hơn | Đồ vật sáng lần lượt để con đếm theo; phép tính có thêm chấm tròn |
+  | 3 | “Let's go step by step.” + 3 bước nhỏ, bước cuối là câu hỏi | Hiện thêm số đếm trên từng đồ vật |
+  | 4 | “Good try! Let's learn it together.” + đáp án | Đáp án được đánh dấu ✓ |
+
+- Âm báo khi sai là tiếng nhẹ, không phải tiếng báo lỗi. Không giới hạn thời gian.
+- Khi làm đúng, thỉnh thoảng Buddy giới thiệu một **từ tiếng Anh mới** (ví dụ *five*, *plus*, *circle*): chỉ ở câu Toán, mỗi từ một lần trong một bài, không ở hai câu liền nhau.
+- Con **không cần** đọc, viết hay nói tiếng Anh để làm xong bài: các gợi ý bằng hình và con số đủ để làm theo.
+- Ứng dụng không gọi AI. Mọi lời Buddy lấy từ ngân hàng câu có sẵn (`src/engine/feedback.ts` và lời riêng của từng câu trong `src/content`), nên vẫn hoạt động khi không có mạng.
+- Góc phụ huynh theo dõi **riêng** mức làm quen tiếng Anh (câu từ vựng, các từ con đã gặp), không trộn vào điểm Toán.
 
 **Học thử**
 - Không tính vào tiến độ của bạn nào và không hiện trong Góc phụ huynh.
@@ -104,7 +123,8 @@ test/          Kiểm thử tự động
   - Ai dùng được máy đó đều mở được Góc phụ huynh & thầy cô: không có mật khẩu, vì không có máy chủ để kiểm tra.
 - **Không có báo cáo cả lớp tự động** từ nhiều máy.
 - **Chưa làm:** dạng câu hỏi nối/ghép cặp, trò chơi “Buddy Challenge”.
-- **Đọc to** dùng giọng có sẵn của trình duyệt. Chất lượng giọng tiếng Việt tùy thiết bị, một số máy có thể không có giọng tiếng Việt.
+- **Đọc to** dùng giọng có sẵn của trình duyệt. Chất lượng giọng tiếng Việt và tiếng Anh tùy thiết bị, một số máy có thể không có giọng tiếng Việt.
+- **Lời Buddy tiếng Anh** do nhóm phát triển soạn, chưa được giáo viên tiếng Anh tiểu học rà soát.
 - **Nội dung chờ đối chiếu SGK:**
   - Tất cả tên bài là tên mô tả chủ đề, **chưa đối chiếu** với bộ sách nhà trường chọn.
   - “Đã duyệt” nghĩa là đáp án và cách chấm đã được kiểm tra (kể cả bằng kiểm thử tự động), không phải bài chính thức trong SGK.
@@ -120,11 +140,19 @@ test/          Kiểm thử tự động
 
 ## 8. Kết quả kiểm thử
 
-`npm test`: 30 bài kiểm thử, gồm:
-- **Ngân hàng câu hỏi:** đáp án khớp hình và phép tính, phạm vi 10, mỗi bài có 10–15 câu, Buddy chỉ nói tiếng Anh, gợi ý không lộ đáp án.
+`npm test`: 40 bài kiểm thử, gồm:
+- **Ngân hàng câu hỏi:** đáp án khớp hình và phép tính, phạm vi 10, mỗi bài có 10–15 câu, gợi ý không lộ đáp án.
+- **Lời Buddy:**
+  - mọi lời đều là tiếng Anh, câu ngắn;
+  - mỗi câu hỏi có đủ lời khen, 2 mức gợi ý, và các bước nhỏ kết thúc bằng câu hỏi;
+  - đủ 5 tiêu chí nghiệm thu: trả lời đúng, sai lần đầu, sai nhiều lần, hoàn thành bài, không có mạng;
+  - lời Buddy không bao giờ trái với kết quả chấm, kiểm ở mọi câu của mọi bài;
+  - trò chơi có phần thưởng bằng tiếng Anh;
+  - từ mới không lặp lại và không xuất hiện ở hai câu liền nhau.
 - **Chấm điểm.**
 - **Bộ máy học:**
-  - tối đa 2 lần thử, câu không hợp lệ không tính lượt;
+  - tối đa 4 lần trả lời, câu không hợp lệ không tính lượt;
+  - lưu câu trả lời thật, số lần trả lời, số gợi ý; mở lại bài giữa chừng vẫn giữ mức gợi ý;
   - điểm chính tính theo lần đầu, Toán và từ vựng tách riêng;
   - không mở được bài của bạn khác;
   - học thử không vào báo cáo và hết hạn sau 7 ngày;

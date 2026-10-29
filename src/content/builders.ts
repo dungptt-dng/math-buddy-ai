@@ -1,6 +1,7 @@
 // Các hàm dựng câu hỏi. Đáp án luôn được TÍNH từ tham số (không gõ tay),
-// để hình minh họa, phép tính và đáp án chuẩn không thể lệch nhau.
-import type { Group, Level, Option, Question, ShapeKind, SkillId, Visual } from './types';
+// để hình minh họa, phép tính và đáp án chuẩn không thể lệch nhau. Lời Buddy (en) cũng được dựng từ chính các con số đó.
+import { cap, countUp, defaultLines, SHAPE_TIP, SKILL_PRAISE, thing, word } from './english';
+import type { EnglishLines, Group, Level, Option, Question, ShapeKind, SkillId, Visual } from './types';
 
 export const NOUN: Record<string, string> = {
   apple: 'quả táo',
@@ -47,6 +48,10 @@ function idOf(options: Option[], label: string): string {
   return o.id;
 }
 
+/** "Yes! Three plus two equals five!" */
+const equation = (a: number, op: '+' | '-', b: number, c: number) =>
+  `Yes! ${cap(word(a))} ${op === '+' ? 'plus' : 'minus'} ${word(b)} equals ${word(c)}!`;
+
 type Base = { id: string; level: Level };
 
 /** Đếm một nhóm đồ vật. Có `choices` -> chọn đáp án, không có -> nhập số. */
@@ -63,8 +68,22 @@ export function count(b: Base & { icon: string; n: number; choices?: number[]; s
     skill: b.skill ?? 'count',
     level: b.level,
     domain: 'math',
-    feedbackCorrect: 'Excellent counting!',
-    feedbackWrong: 'Count slowly.',
+    en:
+      b.n === 0
+        ? {
+            praise: SKILL_PRAISE.count,
+            say: `Yes! Zero ${thing(b.icon)}!`,
+            word: 'zero',
+            tips: ['Look carefully!', `Can you see any ${thing(b.icon)}?`],
+            steps: ['Look at the box.', 'Is it empty?', 'How many is nothing?'],
+          }
+        : {
+            praise: SKILL_PRAISE.count,
+            say: `Yes! ${cap(word(b.n))} ${thing(b.icon, b.n)}!`,
+            word: word(b.n),
+            tips: ['Try counting one by one!', `Look at the ${thing(b.icon)}. How many can you see?`],
+            steps: [`Point to each ${thing(b.icon, 1)}.`, 'Say one number for each one.', 'What is the last number you say?'],
+          },
   };
   return q;
 }
@@ -83,7 +102,13 @@ export function pickGroup(b: Base & { icon: string; n: number; choices: number[]
     skill: 'read_number',
     level: b.level,
     domain: 'math',
-    feedbackWrong: 'Look at the pictures.',
+    en: {
+      praise: SKILL_PRAISE.read_number,
+      say: `Yes! ${cap(word(b.n))} ${thing(b.icon, b.n)}!`,
+      word: word(b.n),
+      tips: ['Count each group.', `Find ${b.n} ${thing(b.icon, b.n)}. Not more, not less.`],
+      steps: ['Count the first group.', 'Count the next group.', `Which group has ${b.n}?`],
+    },
   };
 }
 
@@ -96,6 +121,7 @@ export function sequence(b: Base & { items: (number | null)[]; choices?: number[
   const prev = b.items[gap - 1] as number;
   const value = prev + step;
   const descending = step < 0;
+  const before = b.items.slice(0, gap).join(', ');
   return {
     id: b.id,
     prompt: 'Số nào còn thiếu trong ô trống?',
@@ -110,6 +136,17 @@ export function sequence(b: Base & { items: (number | null)[]; choices?: number[
     skill: 'number_order',
     level: b.level,
     domain: 'math',
+    en: {
+      praise: SKILL_PRAISE.number_order,
+      say: `Yes! ${cap(word(value))} comes next!`,
+      word: word(value),
+      tips: descending
+        ? ['The numbers go down.', `Count back from ${prev}. What comes next?`]
+        : ['Read the numbers from left to right.', `What comes after ${prev}?`],
+      steps: descending
+        ? [`Count back: ${before}…`, 'Go down one more.', 'What number is it?']
+        : [`Count: ${before}…`, 'Go up one more.', 'What number is it?'],
+    },
   };
 }
 
@@ -125,6 +162,7 @@ export function compareGroups(b: Base & { left: Group; right: Group; ask: 'more'
   if (l.count === r.count) throw new Error(`${b.id}: hai nhóm bằng nhau, dùng compareEqual`);
   const leftWins = b.ask === 'more' ? l.count > r.count : l.count < r.count;
   const word = b.ask === 'more' ? 'nhiều hơn' : 'ít hơn';
+  const sameThing = l.icon === r.icon;
   return {
     id: b.id,
     prompt: b.prompt ?? `Nhóm nào có số lượng ${word}?`,
@@ -138,15 +176,23 @@ export function compareGroups(b: Base & { left: Group; right: Group; ask: 'more'
     level: b.level,
     domain: 'math',
     vocab: [b.ask],
-    feedbackCorrect: 'Great comparing!',
-    feedbackWrong: 'Look at the pictures.',
+    en: {
+      praise: SKILL_PRAISE.compare,
+      say: sameThing ? `Yes! That group has ${b.ask}!` : `Yes! ${b.ask === 'more' ? 'More' : 'Fewer'} ${thing(leftWins ? l.icon : r.icon)}!`,
+      word: b.ask,
+      tips: ['Count each group.', 'Match one to one. Which group has extra?'],
+      steps: sameThing
+        ? [`Count the left group: ${l.count}.`, `Count the right group: ${r.count}.`, `Which group has ${b.ask}?`]
+        : [`Count the ${thing(l.icon)}: ${l.count}.`, `Count the ${thing(r.icon)}: ${r.count}.`, `Which group has ${b.ask}?`],
+    },
   };
 }
 
 /** Điền dấu >, <, = giữa hai số. */
 export function compareSign(b: Base & { a: number; b: number }): Question {
   const sign = b.a > b.b ? '>' : b.a < b.b ? '<' : '=';
-  const word = sign === '>' ? 'lớn hơn' : sign === '<' ? 'bé hơn' : 'bằng';
+  const word_ = sign === '>' ? 'lớn hơn' : sign === '<' ? 'bé hơn' : 'bằng';
+  const [big, small] = b.a > b.b ? [b.a, b.b] : [b.b, b.a];
   return {
     id: b.id,
     prompt: 'Chọn dấu thích hợp điền vào ô trống.',
@@ -163,11 +209,20 @@ export function compareSign(b: Base & { a: number; b: number }): Question {
       'Con so sánh hai số: số nào lớn hơn? Khi đếm, số đứng sau thì lớn hơn.',
       'Dấu > và dấu < luôn “há miệng” về phía số lớn hơn. Hai số giống nhau thì dùng dấu =.',
     ],
-    explain: `${b.a} ${sign} ${b.b} vì ${b.a} ${word} ${b.b}.`,
+    explain: `${b.a} ${sign} ${b.b} vì ${b.a} ${word_} ${b.b}.`,
     skill: 'compare',
     level: b.level,
     domain: 'math',
-    feedbackCorrect: 'Great comparing!',
+    en: {
+      praise: SKILL_PRAISE.compare,
+      say: `Yes! ${cap(word(b.a))} is ${sign === '>' ? 'more than' : sign === '<' ? 'less than' : 'equal to'} ${word(b.b)}!`,
+      word: sign === '=' ? 'equal' : undefined,
+      tips: ['Which number is bigger?', 'The open mouth eats the bigger number!'],
+      steps:
+        sign === '='
+          ? [`Look at ${b.a} and ${b.b}.`, 'Count the dots. Are they the same?', 'Which sign means the same?']
+          : [`Look at ${b.a} and ${b.b}.`, `Count: ${countUp(small, big)}. ${big} comes later, so ${big} is bigger.`, `The open mouth goes to ${big}. Which sign?`],
+    },
   };
 }
 
@@ -185,6 +240,13 @@ export function extreme(b: Base & { values: number[]; ask: 'max' | 'min' }): Que
     skill: 'compare',
     level: b.level,
     domain: 'math',
+    en: {
+      praise: SKILL_PRAISE.compare,
+      say: `Yes! ${cap(word(v))} is the ${b.ask === 'max' ? 'biggest' : 'smallest'}!`,
+      word: word(v),
+      tips: ['Count from 0 to 10.', b.ask === 'max' ? 'The biggest number comes last.' : 'The smallest number comes first.'],
+      steps: ['Count: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10.', `Find ${b.values.join(', ')}.`, b.ask === 'max' ? 'Which one did you say last?' : 'Which one did you say first?'],
+    },
   };
 }
 
@@ -199,16 +261,28 @@ export function arith(
   const missing = b.missing === 'b';
   const value = missing ? b.b : c;
   let hints: string[];
+  let tips: [string, string];
+  let steps: string[];
   if (missing) {
     hints =
       b.op === '+'
         ? [`Con giơ ${b.a} ngón tay, rồi giơ thêm từng ngón cho đến khi đủ ${c}.`, 'Đếm xem con đã giơ thêm mấy ngón tay.']
         : [`Con giơ ${b.a} ngón tay, rồi gập dần từng ngón cho đến khi còn ${c}.`, 'Đếm xem con đã gập mấy ngón tay.'];
+    tips = ['Use your fingers!', b.op === '+' ? `Start at ${b.a}. Count up to ${c}.` : `Start at ${b.a}. Count down to ${c}.`];
+    steps =
+      b.op === '+'
+        ? [`Show ${b.a} fingers.`, `Add one finger at a time until you have ${c}.`, 'How many fingers did you add?']
+        : [`Show ${b.a} fingers.`, `Put down one finger at a time until you have ${c}.`, 'How many fingers did you put down?'];
   } else if (b.op === '+') {
     hints =
       b.a === 0 || b.b === 0
         ? ['Cộng với 0 thì số đó không thay đổi.', 'Con nhìn xem số còn lại trong phép tính là số mấy.']
         : [`Con giơ ${b.a} ngón tay, rồi giơ thêm ${b.b} ngón nữa.`, 'Bây giờ con đếm tất cả số ngón tay đang giơ.'];
+    tips = b.a === 0 || b.b === 0 ? ['Plus zero adds nothing.', 'Look at the other number.'] : ['Use your fingers!', `Show ${b.a} fingers. Then ${b.b} more.`];
+    steps =
+      b.a === 0 || b.b === 0
+        ? ['Zero means nothing.', 'Adding nothing does not change a number.', 'So what is the answer?']
+        : [`Start at ${b.a}.`, `Count on ${b.b} more.`, 'Where do you stop?'];
   } else {
     hints =
       b.b === 0
@@ -216,6 +290,13 @@ export function arith(
         : b.a === b.b
           ? ['Con có bao nhiêu thì bớt đi đúng bấy nhiêu.', 'Bớt hết thì còn lại mấy?']
           : [`Con giơ ${b.a} ngón tay, rồi gập bớt ${b.b} ngón.`, 'Bây giờ con đếm số ngón tay còn lại.'];
+    tips =
+      b.b === 0
+        ? ['Minus zero takes nothing away.', 'Does the number change?']
+        : b.a === b.b
+          ? ['Take them all away.', 'If you take all, how many are left?']
+          : ['Use your fingers!', `Show ${b.a} fingers. Put down ${b.b}.`];
+    steps = [`Start with ${b.a}.`, b.b === 0 ? 'Take away nothing.' : `Take away ${b.b}.`, 'How many are left?'];
   }
   return {
     id: b.id,
@@ -231,7 +312,7 @@ export function arith(
     level: b.level,
     domain: 'math',
     vocab: [b.op === '+' ? 'plus' : 'minus'],
-    feedbackCorrect: b.op === '+' ? 'Great adding!' : 'Nice subtracting!',
+    en: { praise: SKILL_PRAISE[b.op === '+' ? 'add' : 'sub'], say: equation(b.a, b.op, b.b, c), word: b.op === '+' ? 'plus' : 'minus', tips, steps },
   };
 }
 
@@ -250,7 +331,13 @@ export function addPictures(b: Base & { left: Group; right: Group; prompt: strin
     skill: 'add',
     level: b.level,
     domain: 'math',
-    feedbackWrong: 'Look at the pictures.',
+    en: {
+      praise: SKILL_PRAISE.add,
+      say: equation(b.left.count, '+', b.right.count, c),
+      word: 'plus',
+      tips: ['Count all of them!', 'Count the first group. Then keep counting.'],
+      steps: [`Count the first group: ${countUp(1, b.left.count)}.`, 'Keep counting the next group. Do not start again!', 'How many in all?'],
+    },
   };
 }
 
@@ -269,7 +356,13 @@ export function subPictures(b: Base & { icon: string; total: number; crossed: nu
     skill: 'sub',
     level: b.level,
     domain: 'math',
-    feedbackWrong: 'Look at the pictures.',
+    en: {
+      praise: SKILL_PRAISE.sub,
+      say: equation(b.total, '-', b.crossed, c),
+      word: 'minus',
+      tips: ['Do not count the crossed ones.', `Look at the ${thing(b.icon)}. Count only the ones left.`],
+      steps: [`There are ${b.total} ${thing(b.icon, b.total)}.`, `${b.crossed} ${b.crossed === 1 ? 'is' : 'are'} crossed out.`, 'Count the ones left. How many?'],
+    },
   };
 }
 
@@ -281,6 +374,22 @@ export function story(b: Base & { text: string; a: number; op: '+' | '-'; b: num
     b.op === '+'
       ? { type: 'objects', groups: [{ icon: b.icon, count: b.a }, { icon: b.icon, count: b.b }], op: '+' }
       : { type: 'crossed', icon: b.icon, total: b.a, crossed: b.b };
+  const en: EnglishLines =
+    b.op === '+'
+      ? {
+          praise: SKILL_PRAISE.add,
+          say: equation(b.a, '+', b.b, c),
+          word: 'plus',
+          tips: ['Put them together!', `Count ${b.a}, then ${b.b} more.`],
+          steps: [`Start with ${b.a} ${thing(b.icon, b.a)}.`, `Add ${b.b} more.`, 'How many in all?'],
+        }
+      : {
+          praise: SKILL_PRAISE.sub,
+          say: equation(b.a, '-', b.b, c),
+          word: 'minus',
+          tips: ['Take some away!', `Start with ${b.a}. Take away ${b.b}.`],
+          steps: [`Start with ${b.a} ${thing(b.icon, b.a)}.`, `Take away ${b.b}.`, 'How many are left?'],
+        };
   return {
     id: b.id,
     prompt: b.text,
@@ -296,6 +405,7 @@ export function story(b: Base & { text: string; a: number; op: '+' | '-'; b: num
     skill: b.op === '+' ? 'add' : 'sub',
     level: b.level,
     domain: 'math',
+    en,
   };
 }
 
@@ -318,6 +428,13 @@ export function whichExpression(b: Base & { target: number; exprs: [number, '+' 
     skill: op === '+' ? 'add' : 'sub',
     level: b.level,
     domain: 'math',
+    en: {
+      praise: SKILL_PRAISE[op === '+' ? 'add' : 'sub'],
+      say: equation(hits[0][0], hits[0][1], hits[0][2], b.target),
+      word: op === '+' ? 'plus' : 'minus',
+      tips: ['Solve each one.', `Which one makes ${b.target}?`],
+      steps: [...labels.map((l) => `${l} = ?`), `Which one is ${b.target}?`],
+    },
   };
 }
 
@@ -335,6 +452,7 @@ const SHAPE_HINT: Record<ShapeKind, string> = {
   rectangle: 'Hình chữ nhật có 4 góc, có 2 cạnh dài và 2 cạnh ngắn, giống cái bảng lớp học.',
 };
 const COLORS = ['#FF8A65', '#58B9F7', '#83DDB4', '#FFC94D', '#B39DDB', '#F48FB1'];
+const SHAPE_STEPS = (kind: ShapeKind) => ['Trace the shape with your finger.', 'Count the corners.', SHAPE_TIP[kind]];
 
 /** Nhìn hình, gọi tên hình. */
 export function nameShape(b: Base & { kind: ShapeKind; choices: ShapeKind[]; color?: string }): Question {
@@ -342,7 +460,7 @@ export function nameShape(b: Base & { kind: ShapeKind; choices: ShapeKind[]; col
   return {
     id: b.id,
     prompt: 'Đây là hình gì?',
-    visual: { type: 'shapes', shapes: [{ kind: b.kind, color: b.color ?? COLORS[0] }] },
+    visual: { type: 'shapes', shapes: [{ kind: b.kind, color: b.color ?? COLORS[0] }], target: b.kind },
     kind: 'choice',
     options,
     answer: b.kind,
@@ -352,8 +470,13 @@ export function nameShape(b: Base & { kind: ShapeKind; choices: ShapeKind[]; col
     level: b.level,
     domain: 'math',
     vocab: [SHAPE_EN[b.kind]],
-    feedbackCorrect: 'Super shape spotting!',
-    feedbackWrong: 'Look at the shapes.',
+    en: {
+      praise: 'Super shape spotting!',
+      say: `Yes! It is a ${SHAPE_EN[b.kind]}!`,
+      word: SHAPE_EN[b.kind],
+      tips: ['Look at the corners.', SHAPE_TIP[b.kind]],
+      steps: [...SHAPE_STEPS(b.kind).slice(0, 2), 'Which name fits?'],
+    },
   };
 }
 
@@ -371,8 +494,13 @@ export function pickShape(b: Base & { kind: ShapeKind; choices: ShapeKind[] }): 
     skill: 'shapes',
     level: b.level,
     domain: 'math',
-    feedbackCorrect: 'Super shape spotting!',
-    feedbackWrong: 'Look at the shapes.',
+    en: {
+      praise: SKILL_PRAISE.shapes,
+      say: `Amazing! You found the ${SHAPE_EN[b.kind]}!`,
+      word: SHAPE_EN[b.kind],
+      tips: [SHAPE_TIP[b.kind], 'Look at each shape carefully.'],
+      steps: ['Look at each shape.', SHAPE_TIP[b.kind], `Which one is the ${SHAPE_EN[b.kind]}?`],
+    },
   };
 }
 
@@ -391,8 +519,13 @@ export function huntShapes(b: Base & { kind: ShapeKind; shapes: ShapeKind[] }): 
     skill: 'shapes',
     level: b.level,
     domain: 'math',
-    feedbackCorrect: 'Super shape spotting!',
-    feedbackWrong: 'Look at the shapes.',
+    en: {
+      praise: SKILL_PRAISE.shapes,
+      say: `Amazing! You found all the ${SHAPE_EN[b.kind]}s!`,
+      word: SHAPE_EN[b.kind],
+      tips: [SHAPE_TIP[b.kind], `Find ${answer.length} ${SHAPE_EN[b.kind]}s.`],
+      steps: ['Look at each shape, one by one.', SHAPE_TIP[b.kind], `Did you find all ${answer.length}?`],
+    },
   };
 }
 
@@ -402,7 +535,7 @@ export function countShapes(b: Base & { kind: ShapeKind; shapes: ShapeKind[] }):
   return {
     id: b.id,
     prompt: `Có bao nhiêu ${SHAPE_NAME[b.kind].toLowerCase()}?`,
-    visual: { type: 'shapes', shapes: b.shapes.map((k, i) => ({ kind: k, color: COLORS[i % COLORS.length] })) },
+    visual: { type: 'shapes', shapes: b.shapes.map((k, i) => ({ kind: k, color: COLORS[i % COLORS.length] })), target: b.kind },
     kind: 'number',
     answer: n,
     hints: [SHAPE_HINT[b.kind], `Con chỉ đếm ${SHAPE_NAME[b.kind].toLowerCase()}, bỏ qua các hình khác.`],
@@ -410,8 +543,14 @@ export function countShapes(b: Base & { kind: ShapeKind; shapes: ShapeKind[] }):
     skill: 'shapes',
     level: b.level,
     domain: 'math',
-    feedbackCorrect: 'Excellent counting!',
-    feedbackWrong: 'Look at the shapes.',
+    en: {
+      praise: SKILL_PRAISE.count,
+      say: `Yes! ${cap(word(n))} ${SHAPE_EN[b.kind]}${n === 1 ? '' : 's'}!`,
+      word: SHAPE_EN[b.kind],
+      // Không dùng SHAPE_TIP ở đây: "3 corners" dễ bị con nhầm thành số hình cần đếm.
+      tips: [`Find the ${SHAPE_EN[b.kind]}s first.`, `Count only the ${SHAPE_EN[b.kind]}s. Skip the other shapes.`],
+      steps: [`Find the ${SHAPE_EN[b.kind]}s.`, 'Point to each one and count.', 'How many?'],
+    },
   };
 }
 
@@ -432,7 +571,12 @@ export function oddShape(b: Base & { shapes: ShapeKind[] }): Question {
     skill: 'shapes',
     level: b.level,
     domain: 'math',
-    feedbackWrong: 'Look at the shapes.',
+    en: {
+      praise: 'Amazing! You found the different shape!',
+      word: 'different',
+      tips: ['Look at each shape.', 'One shape is different.'],
+      steps: ['Look at the first shape.', 'Find a shape that does not match it.', 'Which one is different?'],
+    },
   };
 }
 
@@ -443,25 +587,33 @@ export function lengths(
   b: Base & { lengths: number[]; ask: 'longer' | 'shorter' | 'longest' | 'shortest'; thing?: string; units?: boolean },
 ): Question {
   const labels = b.lengths.map((_, i) => String.fromCharCode(65 + i));
-  const thing = b.thing ?? 'Bút chì';
-  const options: Option[] = labels.map((l) => ({ id: l, label: `${thing} ${l}` }));
+  const thing_ = b.thing ?? 'Bút chì';
+  const options: Option[] = labels.map((l) => ({ id: l, label: `${thing_} ${l}` }));
   const pick = b.ask === 'longer' || b.ask === 'longest' ? Math.max(...b.lengths) : Math.min(...b.lengths);
   if (b.lengths.filter((x) => x === pick).length !== 1) throw new Error(`${b.id}: đáp án không duy nhất`);
-  const word = { longer: 'dài hơn', shorter: 'ngắn hơn', longest: 'dài nhất', shortest: 'ngắn nhất' }[b.ask];
+  const word_ = { longer: 'dài hơn', shorter: 'ngắn hơn', longest: 'dài nhất', shortest: 'ngắn nhất' }[b.ask];
   const answer = labels[b.lengths.indexOf(pick)];
+  const long = b.ask.startsWith('long');
+  const enAsk = { longer: 'longer', shorter: 'shorter', longest: 'the longest', shortest: 'the shortest' }[b.ask];
   return {
     id: b.id,
-    prompt: `${thing} nào ${word}?`,
+    prompt: `${thing_} nào ${word_}?`,
     visual: { type: 'bars', bars: b.lengths.map((len, i) => ({ label: labels[i], length: len, color: BAR_COLORS[i] })), units: b.units },
     kind: 'choice',
     options,
     answer,
-    hints: ['Các đồ vật được đặt thẳng hàng ở đầu bên trái.', `Con nhìn xem đầu bên phải của cái nào ${b.ask.startsWith('long') ? 'vươn ra xa nhất' : 'gần nhất'}.`],
-    explain: `${thing} ${answer} ${word}.`,
+    hints: ['Các đồ vật được đặt thẳng hàng ở đầu bên trái.', `Con nhìn xem đầu bên phải của cái nào ${long ? 'vươn ra xa nhất' : 'gần nhất'}.`],
+    explain: `${thing_} ${answer} ${word_}.`,
     skill: 'length',
     level: b.level,
     domain: 'math',
-    feedbackWrong: 'Look carefully.',
+    en: {
+      praise: SKILL_PRAISE.length,
+      say: `Yes! ${answer} is ${enAsk}!`,
+      word: long ? 'long' : 'short',
+      tips: ['Look at the right ends.', long ? 'Which one goes the farthest?' : 'Which one stops first?'],
+      steps: ['They all start at the same place.', 'Look at the right ends.', long ? 'Which end is the farthest?' : 'Which end is the closest?'],
+    },
   };
 }
 
@@ -477,6 +629,7 @@ export function choice(
     visual?: Question['visual'];
     speak?: string;
     vocab?: string[];
+    en?: Partial<EnglishLines>;
   },
 ): Question {
   const options = textOptions(b.labels);
@@ -494,6 +647,7 @@ export function choice(
     level: b.level,
     domain: 'math',
     vocab: b.vocab,
+    en: defaultLines(b.skill, { word: b.vocab?.[0], ...b.en }),
   };
 }
 
@@ -523,8 +677,13 @@ export function vocab(
     level: 1,
     domain: 'english',
     vocab: [b.word],
-    feedbackCorrect: 'Great English!',
-    feedbackWrong: 'Listen again.',
+    en: {
+      praise: SKILL_PRAISE.vocab,
+      say: `Yes! "${cap(b.word)}"! Great English!`,
+      word: b.word,
+      tips: ['Listen to the word.', 'Tap the speaker. Listen again.'],
+      steps: ['Tap the speaker.', `Say "${b.word}".`, 'Which one is it?'],
+    },
   };
 }
 

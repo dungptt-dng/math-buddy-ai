@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { LESSONS } from '../src/content/lessons';
 import type { Question } from '../src/content/types';
-import { BUDDY_CORRECT, BUDDY_REVEAL, BUDDY_TRY_AGAIN } from '../src/engine/grading';
+import { ENCOURAGE, GAME_REWARD, NEW_WORD, PRAISE, PRAISE_AFTER_RETRY, REVEAL } from '../src/engine/feedback';
 
 const all = LESSONS.flatMap((l) => l.questions.map((q) => ({ lesson: l, q })));
 const VIET = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i;
@@ -113,12 +113,31 @@ test('mỗi câu có gợi ý, lời giải và kỹ năng; câu từ vựng tá
 });
 
 test('lời thoại Buddy chỉ dùng tiếng Anh (không trộn tiếng Việt)', () => {
-  const lines = [...BUDDY_CORRECT, ...BUDDY_TRY_AGAIN, BUDDY_REVEAL];
-  for (const { q } of all) {
-    if (q.feedbackCorrect) lines.push(q.feedbackCorrect);
-    if (q.feedbackWrong) lines.push(q.feedbackWrong);
-  }
+  const lines = [...PRAISE, ...PRAISE_AFTER_RETRY, NEW_WORD, ...ENCOURAGE[1], ...ENCOURAGE[2], ...ENCOURAGE[3], REVEAL, ...Object.values(GAME_REWARD)];
+  for (const { q } of all) lines.push(q.en.praise, q.en.say ?? '', q.en.word ?? '', ...q.en.tips, ...q.en.steps);
   for (const line of lines) assert.ok(!VIET.test(line), `Lời thoại có tiếng Việt: "${line}"`);
+});
+
+test('mỗi câu có đủ lời Buddy tiếng Anh: khen, 2 mức gợi ý và các bước nhỏ kết thúc bằng câu hỏi', () => {
+  for (const { q } of all) {
+    assert.ok(q.en.praise.trim(), `${q.id}: thiếu lời khen`);
+    assert.equal(q.en.tips.length, 2, `${q.id}: cần 2 mức gợi ý`);
+    assert.ok(q.en.tips.every((t) => t.trim()), `${q.id}: gợi ý rỗng`);
+    assert.notEqual(q.en.tips[0], q.en.tips[1], `${q.id}: gợi ý lần 2 phải khác lần 1`);
+    assert.ok(q.en.steps.length >= 2, `${q.id}: cần ít nhất 2 bước nhỏ`);
+    assert.ok(q.en.steps.at(-1)!.trim().endsWith('?'), `${q.id}: bước cuối phải là câu hỏi để con tự trả lời`);
+    // Câu ngắn, đơn giản cho trẻ mới học tiếng Anh.
+    for (const line of [q.en.praise, q.en.say ?? '', ...q.en.tips, ...q.en.steps]) {
+      assert.ok(line.split(/\s+/).length <= 14, `${q.id}: câu quá dài "${line}"`);
+    }
+  }
+});
+
+test('gợi ý tiếng Anh của câu nhập số không nói ra đáp án', () => {
+  for (const { q } of all.filter((x) => x.q.kind === 'number')) {
+    const n = new RegExp(`(^|[^\\d])${q.answer}([^\\d]|$)`);
+    for (const line of [...q.en.tips, ...q.en.steps]) assert.ok(!n.test(line), `${q.id}: "${line}" lộ đáp án ${q.answer}`);
+  }
 });
 
 test('gợi ý không nói thẳng đáp án ở câu tính toán', () => {

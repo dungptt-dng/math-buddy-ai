@@ -2,34 +2,46 @@
 import { beforeEach, test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as engine from '../src/engine/index';
+import { ENCOURAGE, NEW_WORD, PRAISE, PRAISE_AFTER_RETRY, REVEAL } from '../src/engine/feedback';
+import { MAX_TRIES } from '../src/engine/grading';
 import { LESSONS } from '../src/content/lessons';
 import type { Question } from '../src/content/types';
+import type { AnswerResponse } from '../src/types';
 
 const mem = new Map<string, string>();
 engine.useStorage({ getItem: (k) => mem.get(k) ?? null, setItem: (k, v) => void mem.set(k, v) });
 beforeEach(() => mem.clear());
 
 const Q = new Map(LESSONS.flatMap((l) => l.questions).map((q) => [q.id, q]));
+const VIET = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i;
 const right = (q: Question) => q.answer;
 function wrong(q: Question) {
   if (q.kind === 'number') return (q.answer as number) + 1;
   if (q.kind === 'choice') return q.options!.find((o) => o.id !== q.answer)!.id;
   return [q.options!.find((o) => !(q.answer as string[]).includes(o.id))!.id];
 }
-/** Làm hết một bài; `wrongFirst` là các câu cố ý trả lời sai lần đầu. */
-function play(target: { lessonId: string } | { gameId: string }, wrongFirst = new Set<string>(), wrongTwice = new Set<string>()) {
+type Graded = Exclude<AnswerResponse, { status: 'invalid' }>;
+const graded = (r: AnswerResponse): Graded => {
+  assert.notEqual(r.status, 'invalid');
+  return r as Graded;
+};
+/** Mọi chữ Buddy nói trong một phản hồi. */
+const buddyText = (r: Graded) => [r.buddy, r.tip, r.reward, r.englishWord, ...(r.steps ?? [])].filter(Boolean).join(' ');
+
+/** Làm hết một bài; `wrongFirst`: sai lần đầu rồi đúng; `wrongAll`: sai đến hết lượt. */
+function play(target: { lessonId: string } | { gameId: string }, wrongFirst = new Set<string>(), wrongAll = new Set<string>()) {
   const a = engine.startAttempt(target);
+  const replies: Graded[] = [];
   for (const pq of a.questions) {
     const q = Q.get(pq.id)!;
-    if (wrongTwice.has(q.id)) {
-      engine.answer(a.id, q.id, wrong(q));
-      engine.answer(a.id, q.id, wrong(q));
+    if (wrongAll.has(q.id)) {
+      for (let i = 0; i < MAX_TRIES; i++) replies.push(graded(engine.answer(a.id, q.id, wrong(q))));
     } else {
-      if (wrongFirst.has(q.id)) engine.answer(a.id, q.id, wrong(q));
-      engine.answer(a.id, q.id, right(q));
+      if (wrongFirst.has(q.id)) replies.push(graded(engine.answer(a.id, q.id, wrong(q))));
+      replies.push(graded(engine.answer(a.id, q.id, right(q))));
     }
   }
-  return { attempt: a, result: engine.finish(a.id) };
+  return { attempt: a, replies, result: engine.finish(a.id) };
 }
 
 test('chưa chọn tên thì không mở được bài', () => {
@@ -76,30 +88,164 @@ test('câu Toán đứng trước câu từ vựng trong bài', () => {
   assert.ok(firstEnglish > 0 && a.questions.slice(firstEnglish).every((q) => q.domain === 'english'));
 });
 
-test('tối đa 2 lần thử; câu trả lời không hợp lệ không tính là một lần thử', () => {
+// ---------- Tiêu chí nghiệm thu: Buddy phản hồi bằng tiếng Anh ----------
+
+test('1. Trả lời đúng: Buddy khen bằng tiếng Anh', () => {
+  engine.createProfile('Bé Gấu', '🐻');
+  const a = engine.startAttempt({ lessonId: 'add-10' });
+  const q = Q.get(a.questions[0].id)!;
+  const r = graded(engine.answer(a.id, q.id, right(q)));
+  assert.equal(r.status, 'correct');
+  assert.ok(r.done && r.hintLevel === 0 && !r.tip && !r.steps);
+  assert.ok([...PRAISE, NEW_WORD, q.en.praise, q.en.say].includes(r.buddy), r.buddy);
+  assert.ok(!VIET.test(buddyText(r)), buddyText(r));
+});
+
+test('2. Sai lần đầu: Buddy động viên bằng tiếng Anh, gợi ý nhẹ, chưa lộ đáp án', () => {
   engine.createProfile('Bé Gấu', '🐻');
   const a = engine.startAttempt({ lessonId: 'numbers-10' });
   const q = Q.get(a.questions[0].id)!;
-  const invalid = engine.answer(a.id, q.id, q.kind === 'number' ? 'abc' : 'không-có');
-  assert.equal(invalid.status, 'invalid');
-  const first = engine.answer(a.id, q.id, wrong(q));
-  assert.equal(first.status, 'wrong');
-  assert.ok(first.status !== 'invalid' && !first.done && first.guide, 'lần sai đầu: có hướng dẫn, chưa lộ đáp án');
-  assert.ok(first.status !== 'invalid' && first.correctAnswer === undefined);
-  const second = engine.answer(a.id, q.id, wrong(q));
-  assert.ok(second.status === 'wrong' && second.done);
-  assert.deepEqual(second.correctAnswer, q.answer);
+  const r = graded(engine.answer(a.id, q.id, wrong(q)));
+  assert.equal(r.status, 'wrong');
+  assert.ok(!r.done && r.attemptCount === 1 && r.hintLevel === 1);
+  assert.ok(ENCOURAGE[1].includes(r.buddy), r.buddy);
+  assert.equal(r.tip, q.en.tips[0]);
+  assert.equal(r.correctAnswer, undefined);
+  assert.ok(!VIET.test(buddyText(r)));
+});
+
+test('3. Sai nhiều lần: gợi ý rõ dần (nhẹ → cùng đếm → từng bước), hết lượt mới cùng xem đáp án', () => {
+  engine.createProfile('Bé Gấu', '🐻');
+  const a = engine.startAttempt({ lessonId: 'add-10' });
+  const q = Q.get(a.questions.find((x) => x.kind === 'number')!.id)!;
+  const invalid = engine.answer(a.id, q.id, 'abc');
+  assert.equal(invalid.status, 'invalid', 'câu trả lời không hợp lệ không tính là một lần thử');
+  const rs = Array.from({ length: MAX_TRIES }, () => graded(engine.answer(a.id, q.id, wrong(q))));
+  assert.deepEqual(rs.map((r) => r.hintLevel), [1, 2, 3, 0]);
+  assert.deepEqual(rs.map((r) => r.done), [false, false, false, true]);
+  assert.equal(rs[0].tip, q.en.tips[0]);
+  assert.equal(rs[1].tip, q.en.tips[1]);
+  assert.notEqual(rs[0].tip, rs[1].tip, 'lần 2 gợi ý khác lần 1');
+  assert.ok(ENCOURAGE[2].includes(rs[1].buddy));
+  assert.deepEqual(rs[2].steps, q.en.steps, 'lần 3: chia thành các bước nhỏ');
+  assert.ok(ENCOURAGE[3].includes(rs[2].buddy));
+  assert.ok(rs.slice(0, 3).every((r) => r.correctAnswer === undefined), 'chưa lộ đáp án khi còn lượt');
+  assert.equal(rs[3].buddy, REVEAL);
+  assert.equal(rs[3].tip, `The answer is ${q.answer}.`);
+  assert.equal(rs[3].correctAnswer, q.answer);
+  for (const r of rs) assert.ok(!VIET.test(buddyText(r)), buddyText(r));
   assert.throws(() => engine.answer(a.id, q.id, right(q)), (e: engine.EngineError) => e.code === 'conflict');
 });
 
-test('lời Buddy trong phản hồi chỉ dùng tiếng Anh', () => {
+test('đúng sau khi thử lại: Buddy khen sự cố gắng (hoặc giới thiệu từ mới)', () => {
   engine.createProfile('Bé Gấu', '🐻');
-  const a = engine.startAttempt({ lessonId: 'compare-10' });
-  const VIET = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i;
-  for (const pq of a.questions.slice(0, 4)) {
-    const r = engine.answer(a.id, pq.id, wrong(Q.get(pq.id)!));
-    assert.ok(r.status !== 'invalid' && !VIET.test(r.buddy), r.status !== 'invalid' ? r.buddy : '');
+  const a = engine.startAttempt({ lessonId: 'shapes' });
+  const q = Q.get(a.questions[0].id)!;
+  engine.answer(a.id, q.id, wrong(q));
+  const r = graded(engine.answer(a.id, q.id, right(q)));
+  assert.equal(r.status, 'correct');
+  assert.ok([...PRAISE_AFTER_RETRY, NEW_WORD].includes(r.buddy), r.buddy);
+});
+
+test('4. Hoàn thành bài: Buddy chúc mừng bằng tiếng Anh (cả khi làm chưa tốt)', () => {
+  engine.createProfile('Bé Gấu', '🐻');
+  const good = play({ lessonId: 'shapes' }).result;
+  const sub = LESSONS.find((l) => l.id === 'sub-10')!.questions.map((q) => q.id);
+  const weak = play({ lessonId: 'sub-10' }, new Set(), new Set(sub)).result;
+  for (const r of [good, weak]) {
+    assert.ok(r.buddy && r.praise);
+    assert.ok(!VIET.test(r.buddy + r.praise), r.buddy + r.praise);
   }
+  assert.notEqual(good.buddy, weak.buddy);
+});
+
+test('5. Không có AI / mất mạng: Buddy vẫn phản hồi tiếng Anh từ ngân hàng có sẵn', async () => {
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = () => Promise.reject(new Error('offline'));
+  try {
+    engine.createProfile('Bé Gấu', '🐻');
+    const ids = LESSONS.find((l) => l.id === 'compare-10')!.questions.map((q) => q.id);
+    const { replies, result } = play({ lessonId: 'compare-10' }, new Set(ids.slice(0, 4)), new Set(ids.slice(4, 6)));
+    assert.ok(replies.length > ids.length);
+    for (const r of replies) assert.ok(r.buddy.length > 0 && !VIET.test(buddyText(r)), buddyText(r));
+    assert.ok(!VIET.test(result.buddy + result.praise));
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+test('lời Buddy không bao giờ trái với kết quả chấm, ở mọi câu của mọi bài', () => {
+  engine.createProfile('Bé Gấu', '🐻');
+  const praise = new Set([...PRAISE, ...PRAISE_AFTER_RETRY, NEW_WORD]);
+  const wrongLines = new Set([...ENCOURAGE[1], ...ENCOURAGE[2], ...ENCOURAGE[3], REVEAL]);
+  for (const lesson of LESSONS.filter((l) => l.status === 'approved')) {
+    const a = engine.startAttempt({ lessonId: lesson.id });
+    a.questions.forEach((pq, i) => {
+      const q = Q.get(pq.id)!;
+      if (i % 2 === 0) {
+        const r = graded(engine.answer(a.id, q.id, right(q)));
+        assert.equal(r.status, 'correct');
+        assert.ok(praise.has(r.buddy) || r.buddy === q.en.praise || r.buddy === q.en.say, `${q.id}: ${r.buddy}`);
+      } else {
+        const r = graded(engine.answer(a.id, q.id, wrong(q)));
+        assert.equal(r.status, 'wrong');
+        assert.ok(wrongLines.has(r.buddy), `${q.id}: ${r.buddy}`);
+        assert.ok(!/great|excellent|correct|well done/i.test(buddyText(r)), `${q.id}: khen khi sai`);
+      }
+    });
+  }
+});
+
+test('trò chơi: trả lời đúng có phần thưởng bằng tiếng Anh, quy tắc phản hồi giống bài học', () => {
+  engine.createProfile('Bé Mèo', '🐱');
+  for (const g of engine.listGames()) {
+    const a = engine.startAttempt({ gameId: g.id });
+    const q = Q.get(a.questions[0].id)!;
+    const w = graded(engine.answer(a.id, q.id, wrong(q)));
+    assert.ok(ENCOURAGE[1].includes(w.buddy) && w.tip && !w.reward);
+    const r = graded(engine.answer(a.id, q.id, right(q)));
+    assert.ok(r.reward && !VIET.test(r.reward), g.id);
+  }
+});
+
+test('từ tiếng Anh mới: không phải câu nào cũng có, không lặp lại, không ở hai câu liền nhau', () => {
+  engine.createProfile('Bé Mèo', '🐱');
+  const { replies } = play({ lessonId: 'numbers-10' });
+  const introduced = replies.map((r, i) => ({ i, w: r.englishWord })).filter((x) => x.w);
+  assert.ok(introduced.length > 0, 'có giới thiệu từ mới');
+  assert.ok(introduced.length < replies.length / 2 + 1, 'không giới thiệu ở mọi câu');
+  assert.equal(new Set(introduced.map((x) => x.w)).size, introduced.length, 'không lặp từ');
+  for (let k = 1; k < introduced.length; k++) assert.ok(introduced[k].i - introduced[k - 1].i >= 2, 'không ở hai câu liền nhau');
+  for (const x of introduced) assert.equal(replies[x.i].buddy, NEW_WORD);
+});
+
+test('lưu câu trả lời thật, số lần thử, số gợi ý; tiếng Anh theo dõi riêng với Toán', () => {
+  engine.createProfile('Bé Na', '🦊');
+  const a = engine.startAttempt({ lessonId: 'add-10' });
+  const first = Q.get(a.questions[0].id)!;
+  engine.hint(a.id, first.id);
+  engine.answer(a.id, first.id, wrong(first));
+  const stored = JSON.parse(mem.get('mathbuddy.v1')!).attempts[0].results[first.id];
+  assert.deepEqual(stored.answers, [wrong(first)]);
+  assert.equal(stored.tries, 1);
+  assert.equal(stored.hintsUsed, 1, 'chỉ đếm lần con tự bấm Gợi ý');
+
+  // Mở lại giữa chừng: giữ mức gợi ý và phương án đã loại.
+  const p = engine.getAttempt(a.id).progress[0];
+  assert.equal(p.hintLevel, 1);
+  assert.equal(p.help?.tip, first.en.tips[0]);
+  if (first.kind === 'choice') assert.deepEqual(p.eliminated, [wrong(first)]);
+
+  engine.answer(a.id, first.id, right(first));
+  for (const pq of a.questions.slice(1)) engine.answer(a.id, pq.id, right(Q.get(pq.id)!));
+  engine.finish(a.id);
+  const r = engine.reports()[0];
+  assert.equal(r.hintsUsed, 1);
+  assert.equal(r.attempts[0].tries, a.questions.length + 1);
+  assert.ok(r.wordsMet.includes('plus'), 'từ đã gặp gồm từ ở câu từ vựng');
+  assert.equal(r.vocab.answered, 2);
+  assert.equal(r.questionsDone, a.questions.length - 2, 'câu từ vựng không tính vào số câu Toán');
+  assert.ok(engine.exportCsv('profiles').includes('plus'));
 });
 
 test('chưa làm xong thì không kết thúc được bài', () => {

@@ -1,12 +1,14 @@
 // Màn hình làm bài: một câu mỗi lần, phản hồi ngay, gợi ý từng bước. Cũng dùng cho trò chơi.
+// Câu hỏi và nút Gợi ý bằng tiếng Việt; mọi lời Buddy sau khi con trả lời bằng tiếng Anh (BuddyFeedback).
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { Choices, NumberPad, type Mark } from '../components/AnswerInput';
-import { BUDDY_IMG, KidError, KidLayout, Loading } from '../components/Kid';
+import { BuddyFeedback, BuddyTip } from '../components/BuddyFeedback';
+import { KidError, KidLayout, Loading } from '../components/Kid';
 import { Visual } from '../components/Visual';
 import * as engine from '../engine';
-import { sfx, speak } from '../speech';
-import type { AnswerResponse, AttemptState } from '../types';
+import { sfx, speak, useSound } from '../speech';
+import type { AnswerResponse, AttemptState, BuddyHelp, HintLevel } from '../types';
 
 type Feedback = Exclude<AnswerResponse, { status: 'invalid' }>;
 const EMPTY_MARK: Mark = { right: new Set(), wrong: new Set() };
@@ -15,6 +17,7 @@ const GAME_SLOT: Record<string, string> = { 'magic-numbers': '⭐', 'math-garden
 export default function Practice() {
   const { id } = useParams();
   const nav = useNavigate();
+  const [soundOn] = useSound();
   const [attempt, setAttempt] = useState<AttemptState | null>(null);
   const [error, setError] = useState<engine.EngineError | null>(null);
   const [idx, setIdx] = useState(0);
@@ -23,6 +26,9 @@ export default function Practice() {
   const [mark, setMark] = useState<Mark>(EMPTY_MARK);
   const [notice, setNotice] = useState('');
   const [hint, setHint] = useState<{ text: string; index: number; total: number } | null>(null);
+  /** Gợi ý tiếng Anh của Buddy sau lần sai gần nhất, dùng khi con thử lại. */
+  const [help, setHelp] = useState<{ level: HintLevel } & BuddyHelp>({ level: 0 });
+  const [eliminated, setEliminated] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [wins, setWins] = useState(0);
 
@@ -47,7 +53,13 @@ export default function Practice() {
       setAttempt(a);
       setWins(a.progress.filter((p) => p.finalCorrect).length);
       if (next === -1) finish();
-      else setIdx(next);
+      else {
+        // Mở lại giữa chừng: giữ gợi ý và phương án đã loại của câu đang làm dở.
+        const p = a.progress[next];
+        setIdx(next);
+        setHelp({ level: p.hintLevel, ...p.help });
+        setEliminated(new Set(p.eliminated));
+      }
     } catch (e) {
       setError(e as engine.EngineError);
     }
@@ -72,6 +84,7 @@ export default function Practice() {
     setBusy(true);
     setNotice('');
     try {
+      // Bộ máy chấm quyết định đúng/sai trước; lời Buddy đi kèm đã được chọn theo đúng kết quả đó.
       const r: AnswerResponse = engine.answer(Number(id), q.id, value);
       if (r.status === 'invalid') {
         setNotice(r.guide);
@@ -86,10 +99,12 @@ export default function Practice() {
         sfx('wrong');
         const right = r.done && r.correctAnswer !== undefined ? new Set((Array.isArray(r.correctAnswer) ? r.correctAnswer : [r.correctAnswer]).map(String)) : new Set<string>();
         setMark({ right, wrong: new Set(chosen.filter((c) => !right.has(c))) });
-        if (!r.done && r.guide) setHint((h) => ({ text: r.guide!, index: (h?.index ?? 0) + 1, total: q.hintCount }));
+        if (!r.done) {
+          setHelp({ level: r.hintLevel, tip: r.tip, steps: r.steps });
+          if (q.kind === 'choice') setEliminated((s) => new Set([...s, ...chosen]));
+        }
       }
       setFeedback(r);
-      setTimeout(() => speak(r.buddy, 'en-US'), 150);
     } catch (e) {
       setNotice((e as Error).message);
     } finally {
@@ -112,6 +127,8 @@ export default function Practice() {
     if (!attempt) return;
     reset();
     setHint(null);
+    setHelp({ level: 0 });
+    setEliminated(new Set());
     if (idx + 1 >= attempt.questions.length) finish();
     else {
       setIdx(idx + 1);
@@ -156,6 +173,8 @@ export default function Practice() {
   const progressPct = ((idx + (feedback?.done ? 1 : 0)) / total) * 100;
   const locked = !!feedback || busy;
   const numberState = feedback ? (feedback.status === 'correct' ? 'right' : 'wrong') : undefined;
+  // Gợi ý bằng hình: theo mức gợi ý hiện tại; khi đã hết lượt thì cùng đếm đầy đủ để con hiểu đáp án.
+  const visualHelp: HintLevel = feedback?.status === 'correct' ? 0 : feedback?.done ? 3 : help.level;
 
   return (
     <KidLayout>
@@ -192,17 +211,19 @@ export default function Practice() {
           </button>
         </div>
 
-        {q.visual && <Visual v={q.visual} />}
+        {q.visual && <Visual v={q.visual} help={visualHelp} />}
+
+        {!feedback && help.level > 0 && (help.tip || help.steps) && <BuddyTip help={help} hintLevel={help.level} />}
 
         {q.kind === 'number' ? (
           <NumberPad value={(value as string) ?? ''} onChange={(v) => setValue(v)} locked={locked} state={numberState} />
         ) : (
-          <Choices q={q} value={value} onChange={setValue} locked={locked} mark={mark} />
+          <Choices q={q} value={value} onChange={setValue} locked={locked} mark={mark} eliminated={eliminated} />
         )}
 
         {feedback?.done && feedback.status === 'wrong' && q.kind === 'number' && (
-          <p className="hint-box" style={{ background: 'var(--ok-bg)', color: 'var(--ok)' }}>
-            ✓ Đáp án đúng là <b style={{ fontSize: 26 }}>{String(feedback.correctAnswer)}</b>
+          <p className="hint-box answer-box" lang="en">
+            ✓ The answer is <b style={{ fontSize: 26 }}>{String(feedback.correctAnswer)}</b>
           </p>
         )}
 
@@ -239,45 +260,23 @@ export default function Practice() {
           {attempt.mode === 'trial' ? 'Học thử' : 'Bài làm được lưu tự động'} · đã xong {doneCount}/{total} câu
         </p>
       </section>
-      {feedback && <FeedbackBar f={feedback} onRetry={reset} onNext={next} last={idx + 1 >= total} />}
+      {feedback && (
+        <BuddyFeedback
+          isCorrect={feedback.status === 'correct'}
+          attemptCount={feedback.attemptCount}
+          hintLevel={feedback.hintLevel}
+          englishWord={feedback.englishWord}
+          audioEnabled={soundOn}
+          message={feedback.buddy}
+          tip={feedback.tip}
+          steps={feedback.steps}
+          reward={feedback.reward}
+          done={feedback.done}
+          last={idx + 1 >= total}
+          onRetry={reset}
+          onNext={next}
+        />
+      )}
     </KidLayout>
-  );
-}
-
-function FeedbackBar({ f, onRetry, onNext, last }: { f: Feedback; onRetry: () => void; onNext: () => void; last: boolean }) {
-  const good = f.status === 'correct';
-  return (
-    <div className={`feedback ${good ? 'correct' : 'wrong'}`} role="status">
-      <div className="feedback-inner">
-        <img className="buddy-mini" src={BUDDY_IMG} alt="Buddy" />
-        <div className="msg">
-          {/* Lời thoại của Buddy: chỉ tiếng Anh */}
-          <div className="bubble" lang="en">
-            <span aria-hidden>{good ? '🎉' : '💪'}</span>
-            {f.buddy}
-            <span className="lang" aria-hidden>
-              EN
-            </span>
-          </div>
-          {/* Hướng dẫn Toán: tiếng Việt, ở khu vực riêng */}
-          {!good && f.guide && (
-            <div className="guide">
-              <b>{f.done ? '📘 Cùng xem nhé:' : '🧭 Hướng dẫn:'}</b>
-              <span>{f.guide}</span>
-            </div>
-          )}
-          {good && <div className="guide">✅ Chính xác!</div>}
-        </div>
-        {f.done ? (
-          <button className={`btn big ${good ? 'green' : ''}`} onClick={onNext} autoFocus>
-            {last ? 'Xem kết quả 🏁' : 'Tiếp tục ▶'}
-          </button>
-        ) : (
-          <button className="btn big orange" onClick={onRetry} autoFocus>
-            Thử lại ↺
-          </button>
-        )}
-      </div>
-    </div>
   );
 }

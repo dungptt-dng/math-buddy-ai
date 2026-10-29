@@ -1394,6 +1394,209 @@ a {
 .feedback .btn {
   flex: none;
 }
+.feedback {
+  max-height: 72vh;
+  overflow-y: auto;
+}
+
+/* Lời Buddy bằng tiếng Anh sau khi trả lời */
+.en-line {
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 16px;
+  padding: 10px 14px;
+  font-weight: 800;
+  font-size: 19px;
+}
+.en-line.reward {
+  background: #fff3c4;
+  color: #7a5200;
+}
+.new-word {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  justify-self: start;
+  background: linear-gradient(135deg, #c9b6f5, #a98bf0);
+  color: #fff;
+  border-radius: 18px;
+  padding: 6px 8px 6px 12px;
+  box-shadow: 0 4px 0 #7c5fd0;
+}
+.new-word .tag {
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  opacity: 0.9;
+}
+.new-word b {
+  font-size: 28px;
+  letter-spacing: 1px;
+}
+.speak-btn.small {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  font-size: 20px;
+  background: rgba(255, 255, 255, 0.95);
+}
+.en-steps {
+  margin: 0;
+  padding: 10px 14px 10px 38px;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 16px;
+  font-weight: 800;
+  font-size: 18px;
+  display: grid;
+  gap: 4px;
+}
+.buddy-tip {
+  margin: 6px auto 0;
+  max-width: 640px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #f1ebff;
+  border: 3px solid #d9ccfa;
+  border-radius: 22px;
+  padding: 10px 12px;
+  font-weight: 800;
+  font-size: 19px;
+  color: #3b2a72;
+  animation: pop 0.3s both;
+}
+.buddy-tip img {
+  width: 52px;
+  flex: none;
+}
+.buddy-tip-body {
+  flex: 1;
+  display: grid;
+  gap: 6px;
+}
+.buddy-tip .en-steps {
+  background: rgba(255, 255, 255, 0.7);
+}
+.answer-box {
+  background: var(--ok-bg);
+  color: var(--ok);
+}
+
+/* Gợi ý bằng hình: các hình sáng lần lượt để cùng đếm (mức 2), có thêm số đếm (mức 3) */
+.obj.spot,
+.shape-item.spot,
+.seq .car.spot,
+.tok-dots i,
+.bar-end.spot,
+.word-card button.spot {
+  animation-name: spot;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in-out;
+  animation-fill-mode: both;
+}
+.obj.spot,
+.shape-item.spot {
+  border-radius: 14px;
+  background: #fff3c4;
+  box-shadow: 0 0 0 3px #ffd65c;
+}
+@keyframes spot {
+  0%,
+  22%,
+  100% {
+    transform: scale(1);
+  }
+  9% {
+    transform: scale(1.22);
+  }
+}
+.obj-group.spot-box {
+  border-color: var(--yellow-deep);
+  background: #fff8db;
+}
+.count-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 5px;
+  border-radius: 12px;
+  background: var(--blue-ink);
+  color: #fff;
+  font: 900 14px/24px 'Nunito', system-ui, sans-serif;
+  text-align: center;
+}
+.shape-item {
+  position: relative;
+  display: inline-grid;
+  padding: 4px;
+}
+.tok-wrap {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.tok-dots {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+  max-width: 84px;
+}
+.tok-dots i {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--orange-deep);
+}
+.seq .car.spot {
+  box-shadow:
+    0 0 0 4px #ffd65c,
+    inset 0 -8px 0 rgba(0, 0, 0, 0.12);
+}
+.bar-end {
+  position: absolute;
+  top: -6px;
+  bottom: -6px;
+  width: 0;
+  margin-left: -2px;
+  border-left: 4px dashed var(--blue-ink);
+}
+.word-card button.spot {
+  box-shadow: 0 0 0 4px #ffd65c;
+  animation-duration: 1.6s;
+}
+@media (max-width: 640px) {
+  .tok-dots i {
+    width: 10px;
+    height: 10px;
+  }
+  .tok-dots {
+    max-width: 64px;
+  }
+  .en-line,
+  .en-steps,
+  .buddy-tip {
+    font-size: 17px;
+  }
+  .buddy-tip img {
+    width: 40px;
+  }
+  .new-word b {
+    font-size: 24px;
+  }
+}
+/* Phương án đã chọn sai ở lần trước: gạch đi, không bấm được nữa */
+.opt.out {
+  opacity: 0.45;
+  background: #f3f5f8;
+  box-shadow: none;
+}
+.opt.out .mark {
+  background: #9aa8b6;
+}
 
 /* Thanh trò chơi */
 .game-strip {

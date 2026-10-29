@@ -55,6 +55,12 @@ const numbers: Lesson = {
       hints: ['Con đếm to: 4, 5, 6… số tiếp theo là gì?', 'Số đứng ngay sau thì lớn hơn 1 đơn vị.'],
       explain: 'Đếm 5, 6, 7 – số đứng ngay sau số 6 là số 7.',
       skill: 'number_order',
+      en: {
+        say: 'Yes! Seven comes after six!',
+        word: 'seven',
+        tips: ['Count out loud: 4, 5, 6…', 'What comes after 6?'],
+        steps: ['Count: 4, 5, 6.', 'Say one more number.', 'What number comes after 6?'],
+      },
     }),
     count({ id: 'n10-11', level: 2, icon: 'balloon', n: 10 }),
     addPictures({
@@ -87,7 +93,7 @@ const numbers: Lesson = {
   ],
 };
 // n10-12 dùng phép cộng hình ảnh nhưng mục tiêu là đếm gộp hai nhóm -> gắn kỹ năng đếm.
-numbers.questions[11] = { ...numbers.questions[11], skill: 'count', feedbackCorrect: 'Excellent counting!' };
+numbers.questions[11] = { ...numbers.questions[11], skill: 'count', en: { ...numbers.questions[11].en, praise: 'Wonderful counting!' } };
 
 const compare: Lesson = {
   id: 'compare-10',
@@ -113,6 +119,11 @@ const compare: Lesson = {
       explain: 'Có 4 bông hoa và 4 con bướm, số lượng bằng nhau.',
       skill: 'compare',
       vocab: ['equal'],
+      en: {
+        say: 'Yes! Four and four. They are equal!',
+        tips: ['Count the flowers. Count the butterflies.', 'Match one to one. Is any left over?'],
+        steps: ['Count the flowers: 4.', 'Count the butterflies: 4.', 'Are they the same?'],
+      },
     }),
     compareSign({ id: 'cmp-04', level: 2, a: 5, b: 3 }),
     compareSign({ id: 'cmp-05', level: 2, a: 2, b: 7 }),
@@ -130,6 +141,13 @@ const compare: Lesson = {
       skill: 'compare',
       level: 3,
       domain: 'math',
+      en: {
+        praise: 'Great comparing!',
+        say: 'Yes! Eight is between seven and nine!',
+        word: 'eight',
+        tips: ['Count: 7, …, 9.', 'Which number is in the middle?'],
+        steps: ['Say 7.', 'Say the next number.', 'Is it before 9?'],
+      },
     },
     compareGroups({
       id: 'cmp-11',
@@ -148,6 +166,11 @@ const compare: Lesson = {
       hints: ['Con tìm số bé nhất trước.', 'Số bé nhất đứng đầu, số lớn nhất đứng cuối.'],
       explain: 'Từ bé đến lớn: 2, 6, 9.',
       skill: 'compare',
+      en: {
+        say: 'Yes! Two, six, nine. Small to big!',
+        tips: ['Find the smallest number first.', 'Small first. Big last.'],
+        steps: ['Find the smallest: 2, 6 or 9?', 'Then the next one.', 'Which order starts small and ends big?'],
+      },
     }),
     vocab({
       id: 'cmp-v1',
@@ -301,6 +324,12 @@ const shapes: Lesson = {
       hints: ['Con nhớ lại: hình tròn không có góc nào.', 'Quyển sách và phong bì thư đều có 4 góc.'],
       explain: 'Mặt đồng hồ có dạng hình tròn. Quyển sách và phong bì thư có dạng hình chữ nhật.',
       skill: 'shapes',
+      en: {
+        say: 'Yes! A clock is a circle!',
+        word: 'circle',
+        tips: ['A circle has no corners.', 'Which one is round?'],
+        steps: ['Look at each picture.', 'Does it have corners?', 'Which one is round?'],
+      },
     }),
     oddShape({ id: 'shp-11', level: 3, shapes: ['triangle', 'triangle', 'circle', 'triangle'] }),
     vocab({
@@ -362,6 +391,12 @@ const length: Lesson = {
       hints: ['Hai bút chì được đặt thẳng hàng ở đầu bên trái.', 'Con nhìn đầu bên phải của hai bút chì: có cái nào thò ra không?'],
       explain: 'Hai bút chì có đầu bên phải thẳng hàng nhau, nên dài bằng nhau.',
       skill: 'length',
+      en: {
+        say: 'Yes! They are the same length!',
+        word: 'same',
+        tips: ['Look at the right ends.', 'Does one stick out?'],
+        steps: ['They start at the same place.', 'Look at the right ends.', 'Do they stop at the same place?'],
+      },
     }),
     {
       id: 'len-07',
@@ -374,7 +409,13 @@ const length: Lesson = {
       skill: 'length',
       level: 2,
       domain: 'math',
-      feedbackCorrect: 'Excellent counting!',
+      en: {
+        praise: 'Wonderful counting!',
+        say: 'Yes! Six squares long!',
+        word: 'six',
+        tips: ['Count the squares one by one.', 'Start at the left end.'],
+        steps: ['Point to the first square.', 'Count each square.', 'How many squares?'],
+      },
     },
     {
       id: 'len-08',
@@ -394,6 +435,13 @@ const length: Lesson = {
       skill: 'length',
       level: 3,
       domain: 'math',
+      en: {
+        praise: 'Great looking!',
+        say: 'Yes! B is three squares longer!',
+        word: 'longer',
+        tips: ['Count the squares in A. Count the squares in B.', 'Look at the part of B that sticks out.'],
+        steps: ['A has 4 squares.', 'B has 7 squares.', 'Count the extra squares in B. How many?'],
+      },
     },
     choice({
       id: 'len-09',
@@ -404,6 +452,12 @@ const length: Lesson = {
       hints: ['Con so sánh hai số 5 và 3.', 'Bút nào dài nhiều ô hơn thì dài hơn.'],
       explain: '5 lớn hơn 3, nên bút chì A dài hơn.',
       skill: 'length',
+      en: {
+        say: 'Yes! Five is more than three. A is longer!',
+        word: 'longer',
+        tips: ['Look at 5 and 3.', 'More squares means longer.'],
+        steps: ['A is 5 squares.', 'B is 3 squares.', 'Which number is bigger?'],
+      },
     }),
     choice({
       id: 'len-10',
@@ -422,6 +476,11 @@ const length: Lesson = {
       hints: ['Con tìm băng giấy ngắn nhất trước.', 'Băng ngắn nhất đứng đầu, băng dài nhất đứng cuối.'],
       explain: 'A ngắn nhất, rồi đến C, B dài nhất: A, C, B.',
       skill: 'length',
+      en: {
+        say: 'Yes! A, C, B. Short to long!',
+        tips: ['Find the shortest one first.', 'Short first. Long last.'],
+        steps: ['Find the shortest strip.', 'Then the middle one.', 'Which order goes short to long?'],
+      },
     }),
   ],
 };

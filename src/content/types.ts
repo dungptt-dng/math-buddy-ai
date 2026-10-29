@@ -1,5 +1,5 @@
-// Kiểu dữ liệu của ngân hàng nội dung. Đáp án (answer), gợi ý (hints) và lời giải (explain) chỉ được bộ máy chấm
-// (src/engine) dùng; màn hình làm bài chỉ nhận PublicQuestion.
+// Kiểu dữ liệu của ngân hàng nội dung. Đáp án (answer), gợi ý (hints), lời giải (explain) và lời Buddy (en) chỉ được
+// bộ máy chấm (src/engine) dùng; màn hình làm bài chỉ nhận PublicQuestion.
 
 export type Domain = 'math' | 'english';
 /** 1 = Nhận biết, 2 = Thông hiểu, 3 = Vận dụng (chỉ dùng nội bộ). */
@@ -25,7 +25,7 @@ export type Visual =
   | { type: 'crossed'; icon: string; total: number; crossed: number }
   | { type: 'compare'; left: Group; right: Group }
   | { type: 'expression'; tokens: string[] }
-  | { type: 'shapes'; shapes: { kind: ShapeKind; color: string }[] }
+  | { type: 'shapes'; shapes: { kind: ShapeKind; color: string }[]; target?: ShapeKind }
   | { type: 'sequence'; items: (number | null)[] }
   | { type: 'bars'; bars: { label: string; length: number; color: string }[]; units?: boolean }
   | { type: 'word'; text: string };
@@ -37,6 +37,20 @@ export type Option = {
   color?: string;
   icon?: string;
   count?: number;
+};
+
+/** Lời Buddy cho riêng một câu: CHỈ tiếng Anh đơn giản. */
+export type EnglishLines = {
+  /** Lời khen theo kỹ năng, ví dụ "Wonderful counting!". */
+  praise: string;
+  /** Lời khen nhắc lại kết quả, ví dụ "Yes! Three plus two equals five!". */
+  say?: string;
+  /** Từ tiếng Anh Buddy có thể giới thiệu sau khi con làm đúng. */
+  word?: string;
+  /** Gợi ý khi sai lần 1 (nhẹ) và lần 2 (cùng đếm, có hình được làm nổi bật). */
+  tips: [string, string];
+  /** Sai lần 3: chia thành các bước nhỏ. Bước cuối là câu hỏi, không nói thẳng đáp án. */
+  steps: string[];
 };
 
 export type Question = {
@@ -55,8 +69,7 @@ export type Question = {
   level: Level;
   domain: Domain;
   vocab?: string[];
-  feedbackCorrect?: string;
-  feedbackWrong?: string;
+  en: EnglishLines;
 };
 
 export type Lesson = {

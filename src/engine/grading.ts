@@ -43,14 +43,8 @@ export function grade(q: GradableQuestion, input: unknown): GradeStatus {
   }
 }
 
-// Lời thoại của Buddy: CHỈ tiếng Anh đơn giản, không trộn tiếng Việt.
-export const BUDDY_CORRECT = ['Great job!', 'Well done!', 'You got it!', 'Excellent!', 'Super!', "Let's try the next one!"];
-export const BUDDY_TRY_AGAIN = ['Good try!', "Let's try again.", 'You can do it!'];
-export const BUDDY_REVEAL = "Good try! Let's learn it together.";
-
-export function pick<T>(list: T[], seed: number): T {
-  return list[Math.abs(seed) % list.length];
-}
-
-/** Số lần trả lời tối đa cho mỗi câu trước khi Buddy hướng dẫn đáp án. */
-export const MAX_TRIES = 2;
+/**
+ * Số lần trả lời tối đa cho mỗi câu. Sai lần 1, 2, 3: Buddy gợi ý rõ dần (nhẹ → cùng đếm → từng bước nhỏ) và cho thử lại.
+ * Sai lần 4: Buddy cùng con xem đáp án. Điểm chính vẫn chỉ tính câu đúng ngay lần đầu.
+ */
+export const MAX_TRIES = 4;

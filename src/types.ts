@@ -6,7 +6,7 @@ export type Visual =
   | { type: 'crossed'; icon: string; total: number; crossed: number }
   | { type: 'compare'; left: Group; right: Group }
   | { type: 'expression'; tokens: string[] }
-  | { type: 'shapes'; shapes: { kind: ShapeKind; color: string }[] }
+  | { type: 'shapes'; shapes: { kind: ShapeKind; color: string }[]; target?: ShapeKind }
   | { type: 'sequence'; items: (number | null)[] }
   | { type: 'bars'; bars: { label: string; length: number; color: string }[]; units?: boolean }
   | { type: 'word'; text: string };
@@ -25,7 +25,22 @@ export type PublicQuestion = {
   hintCount: number;
 };
 
-export type Progress = { questionId: string; done: boolean; tries: number; firstTryCorrect: boolean; finalCorrect: boolean };
+/** 0 = chưa cần gợi ý, 1 = gợi ý nhẹ, 2 = cùng đếm (hình được làm nổi bật), 3 = từng bước nhỏ. */
+export type HintLevel = 0 | 1 | 2 | 3;
+/** Gợi ý tiếng Anh của Buddy cho lần thử lại. */
+export type BuddyHelp = { tip?: string; steps?: string[] };
+
+export type Progress = {
+  questionId: string;
+  done: boolean;
+  tries: number;
+  firstTryCorrect: boolean;
+  finalCorrect: boolean;
+  hintLevel: HintLevel;
+  /** Phương án đã chọn sai (câu một lựa chọn) – được gạch đi khi thử lại. */
+  eliminated: string[];
+  help: BuddyHelp | null;
+};
 
 export type AttemptState = {
   id: number;
@@ -44,12 +59,20 @@ export type AnswerResponse =
   | { status: 'invalid'; guide: string }
   | {
       status: 'correct' | 'wrong';
-      buddy: string;
-      guide?: string;
       done: boolean;
-      triesLeft?: number;
+      /** Lần trả lời thứ mấy của câu này. */
+      attemptCount: number;
+      hintLevel: HintLevel;
+      /** Lời Buddy – chỉ tiếng Anh. */
+      buddy: string;
+      tip?: string;
+      steps?: string[];
+      /** Từ tiếng Anh mới Buddy giới thiệu (không phải câu nào cũng có). */
+      englishWord?: string;
+      /** Phần thưởng trong trò chơi. */
+      reward?: string;
+      /** Chỉ có khi câu đã xong. */
       correctAnswer?: string | number | string[];
-      explain?: string;
     };
 
 export type LessonCard = {
@@ -103,6 +126,8 @@ export type AttemptSummary = {
   mathTotal: number;
   vocabCorrect: number;
   vocabTotal: number;
+  tries: number;
+  hintsUsed: number;
 };
 
 export type ProfileReport = {
@@ -112,7 +137,10 @@ export type ProfileReport = {
   accuracy: number | null;
   correctAfterRetry: number;
   lessonsCompleted: number;
+  hintsUsed: number;
+  /** Mức làm quen tiếng Anh – theo dõi riêng, không tính vào điểm Toán. */
   vocab: { answered: number; correct: number };
+  wordsMet: string[];
   skills: SkillStat[];
   attempts: AttemptSummary[];
   lastActive: string | null;

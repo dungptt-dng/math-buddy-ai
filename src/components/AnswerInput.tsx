@@ -31,12 +31,15 @@ export function Choices({
   onChange,
   locked,
   mark,
+  eliminated,
 }: {
   q: PublicQuestion;
   value: string | string[] | null;
   onChange: (v: string | string[]) => void;
   locked: boolean;
   mark: Mark;
+  /** Phương án đã chọn sai ở lần trước: gạch đi để con không chọn lại (gợi ý bằng hình). */
+  eliminated?: Set<string>;
 }) {
   const multi = q.kind === 'multi';
   const selected = new Set(Array.isArray(value) ? value : value ? [value] : []);
@@ -45,14 +48,15 @@ export function Choices({
     <div className="options" role={multi ? 'group' : 'radiogroup'} aria-label="Các phương án">
       {(q.options ?? []).map((o) => {
         const isSel = selected.has(o.id);
-        const state = mark.right.has(o.id) ? 'right' : mark.wrong.has(o.id) ? 'wrong' : isSel ? 'selected' : '';
+        const out = !!eliminated?.has(o.id) && !mark.right.has(o.id) && !mark.wrong.has(o.id);
+        const state = mark.right.has(o.id) ? 'right' : mark.wrong.has(o.id) ? 'wrong' : out ? 'out' : isSel ? 'selected' : '';
         return (
           <button
             key={o.id}
             className={`opt ${state} ${longText ? 'text-sm' : ''}`}
             role={multi ? 'checkbox' : 'radio'}
             aria-checked={isSel}
-            disabled={locked}
+            disabled={locked || out}
             onClick={() => {
               sfx('tap');
               if (multi) {
@@ -65,7 +69,7 @@ export function Choices({
           >
             <OptionBody o={o} />
             {state === 'right' && <span className="mark" aria-label="Đúng">✓</span>}
-            {state === 'wrong' && <span className="mark" aria-label="Chưa đúng">✗</span>}
+            {(state === 'wrong' || state === 'out') && <span className="mark" aria-label="Chưa đúng">✗</span>}
             {state === 'selected' && multi && <span className="mark">✓</span>}
           </button>
         );

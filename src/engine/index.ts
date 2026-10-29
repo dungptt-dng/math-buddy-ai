@@ -6,7 +6,8 @@ import { LESSONS } from '../content/lessons';
 import { SKILL_NAMES, toPublic, type Lesson, type Question, type SkillId } from '../content/types';
 import type { AnswerResponse, AttemptState, AttemptSummary, GameCard, LessonCard, Me, Profile, ProfileReport, Result, SkillLabel, SkillStat } from '../types';
 import { csvTime, toCsv } from './csv';
-import { BUDDY_CORRECT, BUDDY_REVEAL, BUDDY_TRY_AGAIN, grade, MAX_TRIES, pick } from './grading';
+import { buddyLines, GAME_REWARD, hintLevelFor } from './feedback';
+import { grade, MAX_TRIES } from './grading';
 
 export class EngineError extends Error {
   constructor(
@@ -28,10 +29,13 @@ type QResult = {
   skill: SkillId;
   domain: 'math' | 'english';
   tries: number;
+  /** Số lần con tự bấm nút Gợi ý. */
   hintsUsed: number;
   firstTryCorrect: boolean | null;
   finalCorrect: boolean | null;
   done: boolean;
+  /** Các câu trả lời hợp lệ con đã gửi, theo thứ tự (dữ liệu cũ có thể không có). */
+  answers?: unknown[];
 };
 type Attempt = {
   id: number;
@@ -45,6 +49,8 @@ type Attempt = {
   startedAt: string;
   finishedAt: string | null;
   results: Record<string, QResult>;
+  /** Từ tiếng Anh Buddy đã giới thiệu trong lần làm bài này (theo dõi riêng với điểm Toán). */
+  words?: { questionId: string; word: string }[];
 };
 type Data = {
   v: 1;
@@ -218,6 +224,22 @@ function summary(a: Attempt) {
   };
 }
 
+/** Số lần trả lời và số lần bấm Gợi ý (cả Toán và từ vựng). */
+function effort(a: Attempt) {
+  const rs = Object.values(a.results);
+  return { tries: rs.reduce((s, x) => s + x.tries, 0), hintsUsed: rs.reduce((s, x) => s + x.hintsUsed, 0) };
+}
+
+/** Từ tiếng Anh con đã gặp: từ Buddy giới thiệu và từ ở các câu từ vựng đã làm. */
+function wordsMet(attempts: Attempt[]): string[] {
+  const set = new Set<string>();
+  for (const a of attempts) {
+    for (const w of a.words ?? []) set.add(w.word);
+    for (const [id, r] of Object.entries(a.results)) if (r.done && r.domain === 'english') question(id).vocab?.forEach((w) => set.add(w));
+  }
+  return [...set];
+}
+
 export function listLessons(): LessonCard[] {
   const d = load();
   const owner = ownerOf(d);
@@ -266,9 +288,29 @@ function attemptState(a: Attempt): AttemptState {
     questions: a.questionIds.map((id) => toPublic(question(id))),
     progress: a.questionIds.map((id) => {
       const r = a.results[id];
-      return { questionId: id, done: r.done, tries: r.tries, firstTryCorrect: r.firstTryCorrect === true, finalCorrect: r.finalCorrect === true };
+      const q = question(id);
+      // Mở lại bài giữa chừng: câu đang làm dở giữ nguyên mức gợi ý và các phương án đã loại.
+      const help = !r.done && r.tries > 0 ? buddyLines({ isCorrect: false, attemptCount: r.tries, done: false, en: q.en, answerText: '', seed: 0 }) : null;
+      return {
+        questionId: id,
+        done: r.done,
+        tries: r.tries,
+        firstTryCorrect: r.firstTryCorrect === true,
+        finalCorrect: r.finalCorrect === true,
+        hintLevel: r.done ? 0 : hintLevelFor(r.tries),
+        eliminated: q.kind === 'choice' ? (r.answers ?? []).filter((x): x is string => typeof x === 'string' && x !== q.answer) : [],
+        help: help && { tip: help.tip, steps: help.steps },
+      };
     }),
   };
+}
+
+/** Câu Buddy nói khi cùng con xem đáp án. */
+function answerText(q: Question): string {
+  if (q.kind === 'number') return `The answer is ${q.answer}.`;
+  if (q.kind === 'multi') return 'Look at the green ticks.';
+  const label = q.options?.find((o) => o.id === q.answer)?.label;
+  return label && /^[\d\s,+−=<>-]+$/.test(label) ? `The answer is ${label}.` : 'Look at the green tick.';
 }
 
 function shuffle<T>(arr: T[]): T[] {
@@ -316,8 +358,9 @@ export function startAttempt(target: { lessonId: string } | { gameId: string }):
       startedAt: new Date().toISOString(),
       finishedAt: null,
       results: Object.fromEntries(
-        questions.map((q) => [q.id, { skill: q.skill, domain: q.domain, tries: 0, hintsUsed: 0, firstTryCorrect: null, finalCorrect: null, done: false }]),
+        questions.map((q) => [q.id, { skill: q.skill, domain: q.domain, tries: 0, hintsUsed: 0, firstTryCorrect: null, finalCorrect: null, done: false, answers: [] }]),
       ),
+      words: [],
     };
     d.attempts.push(a);
     return attemptState(a);
@@ -365,27 +408,53 @@ export function answer(attemptId: number, questionId: string, value: unknown): A
         guide: q.kind === 'number' ? 'Con hãy nhập một số bằng các nút số nhé.' : q.kind === 'multi' ? 'Con hãy chạm chọn ít nhất một hình nhé.' : 'Con hãy chọn một đáp án nhé.',
       };
     }
+    // 1) Chấm trước. 2) Lưu kết quả thật. 3) Sau đó mới chọn lời Buddy theo đúng kết quả đã chấm.
     const correct = status === 'correct';
     const tryNo = r.tries + 1;
     const done = correct || tryNo >= MAX_TRIES;
-    const guideIndex = Math.min(r.hintsUsed, q.hints.length - 1);
     r.tries = tryNo;
     if (r.firstTryCorrect === null) r.firstTryCorrect = correct;
     r.finalCorrect = done ? correct : null;
     r.done = done;
-    if (!correct && !done && r.hintsUsed < q.hints.length) r.hintsUsed++;
+    (r.answers ??= []).push(value);
 
-    const seed = a.id * 31 + tryNo + q.id.length;
-    if (correct) {
-      const pool = q.feedbackCorrect ? [...BUDDY_CORRECT, q.feedbackCorrect, q.feedbackCorrect] : BUDDY_CORRECT;
-      return { status, buddy: pick(pool, seed), done: true, correctAnswer: q.answer, explain: q.explain };
-    }
-    if (!done) {
-      const pool = q.feedbackWrong ? [...BUDDY_TRY_AGAIN, q.feedbackWrong] : BUDDY_TRY_AGAIN;
-      return { status, buddy: pick(pool, seed), guide: q.hints[guideIndex], done: false, triesLeft: MAX_TRIES - tryNo };
-    }
-    return { status, buddy: BUDDY_REVEAL, guide: q.explain, done: true, correctAnswer: q.answer, explain: q.explain };
+    const englishWord = correct ? introduceWord(a, q) : undefined;
+    const lines = buddyLines({
+      isCorrect: correct,
+      attemptCount: tryNo,
+      done,
+      en: q.en,
+      englishWord,
+      answerText: answerText(q),
+      seed: a.id * 31 + tryNo + a.questionIds.indexOf(q.id) * 7,
+    });
+    return {
+      status,
+      done,
+      attemptCount: tryNo,
+      hintLevel: done ? 0 : hintLevelFor(tryNo),
+      ...lines,
+      englishWord,
+      reward: correct && a.gameId ? GAME_REWARD[a.gameId] : undefined,
+      correctAnswer: done ? q.answer : undefined,
+    };
   });
+}
+
+/**
+ * Giới thiệu một từ tiếng Anh sau câu làm đúng – không phải câu nào cũng có, để con không bị quá tải:
+ * chỉ câu Toán, mỗi từ một lần trong một bài, và không giới thiệu ở hai câu liền nhau.
+ */
+function introduceWord(a: Attempt, q: Question): string | undefined {
+  const w = q.en.word;
+  if (!w || q.domain !== 'math') return undefined;
+  const words = (a.words ??= []);
+  if (words.some((x) => x.word === w)) return undefined;
+  const here = a.questionIds.indexOf(q.id);
+  const last = words.at(-1);
+  if (last && here - a.questionIds.indexOf(last.questionId) < 2) return undefined;
+  words.push({ questionId: q.id, word: w });
+  return w;
 }
 
 export function finish(attemptId: number): Result {
@@ -435,14 +504,15 @@ function resultOf(d: Data, a: Attempt): Result {
     if (upcoming) next = { lessonId: upcoming.id, title: upcoming.title, reason: 'Con sẵn sàng khám phá bài mới rồi!' };
   }
   const ratio = math.length ? mathCorrect / math.length : eng.length ? eng.filter((x) => x.firstTryCorrect).length / eng.length : 0;
-  const praise =
+  // Lời chúc mừng của Buddy khi xong bài: chỉ tiếng Anh, luôn tích cực.
+  const [buddy, praise] =
     ratio >= 0.9
-      ? 'Con làm rất giỏi! Buddy tự hào về con lắm.'
+      ? ['Fantastic! You finished!', 'You are a math star!']
       : ratio >= 0.7
-        ? 'Con làm tốt lắm! Cố gắng thêm một chút nữa là tuyệt vời.'
+        ? ['Great job! You finished!', 'You are doing great!']
         : ratio >= 0.4
-          ? 'Con đã rất chăm chỉ! Luyện thêm một lần nữa con sẽ giỏi hơn.'
-          : 'Cảm ơn con đã cố gắng! Mình cùng luyện lại thật chậm nhé.';
+          ? ['You did it! Well done!', 'Practice makes you stronger!']
+          : ['You finished! Good trying!', "Let's practice again, step by step."];
   return {
     attemptId: a.id,
     kind: a.kind,
@@ -454,7 +524,7 @@ function resultOf(d: Data, a: Attempt): Result {
     vocabCorrect: eng.filter((x) => x.firstTryCorrect).length,
     vocabTotal: eng.length,
     correctAfterRetry: math.filter((x) => !x.firstTryCorrect && x.finalCorrect).length,
-    buddy: ratio >= 0.7 ? 'Great job!' : 'You can do it!',
+    buddy,
     praise,
     goodSkills,
     next,
@@ -489,7 +559,7 @@ function reportOf(d: Data, p: Profile): ProfileReport {
   });
   const attempts: AttemptSummary[] = mine
     .filter((a) => a.status !== 'abandoned' || Object.values(a.results).some((r) => r.done))
-    .map((a) => ({ id: a.id, kind: a.kind, title: lessonTitle(a), status: a.status, startedAt: a.startedAt, finishedAt: a.finishedAt, ...summary(a) }))
+    .map((a) => ({ id: a.id, kind: a.kind, title: lessonTitle(a), status: a.status, startedAt: a.startedAt, finishedAt: a.finishedAt, ...summary(a), ...effort(a) }))
     .reverse();
   const correct = math.filter((r) => r.firstTryCorrect).length;
   return {
@@ -499,7 +569,9 @@ function reportOf(d: Data, p: Profile): ProfileReport {
     accuracy: math.length ? correct / math.length : null,
     correctAfterRetry: math.filter((r) => !r.firstTryCorrect && r.finalCorrect).length,
     lessonsCompleted: new Set(mine.filter((a) => a.status === 'completed' && a.lessonId).map((a) => a.lessonId)).size,
+    hintsUsed: answered.reduce((s, r) => s + r.hintsUsed, 0),
     vocab: { answered: eng.length, correct: eng.filter((r) => r.firstTryCorrect).length },
+    wordsMet: wordsMet(mine),
     skills: skillStats,
     attempts,
     lastActive: mine.map((a) => a.finishedAt ?? a.startedAt).sort().at(-1) ?? null,
@@ -517,16 +589,18 @@ export function exportCsv(type: 'profiles' | 'attempts'): string {
   const pct = (x: number | null) => (x === null ? '' : Math.round(x * 100));
   if (type === 'profiles') {
     return toCsv(
-      ['Bạn học', 'Số câu Toán đã làm', 'Số câu đúng (lần đầu)', 'Tỷ lệ đúng (%)', 'Đúng sau khi thử lại', 'Số bài đã hoàn thành', 'Từ vựng: số câu', 'Từ vựng: số câu đúng', 'Kỹ năng đã vững', 'Kỹ năng cần ôn', 'Lần học gần nhất'],
+      ['Bạn học', 'Số câu Toán đã làm', 'Số câu đúng (lần đầu)', 'Tỷ lệ đúng (%)', 'Đúng sau khi thử lại', 'Số lần bấm Gợi ý', 'Số bài đã hoàn thành', 'Từ vựng: số câu', 'Từ vựng: số câu đúng', 'Từ tiếng Anh đã làm quen', 'Kỹ năng đã vững', 'Kỹ năng cần ôn', 'Lần học gần nhất'],
       rs.map((r) => [
         r.profile.nickname,
         r.questionsDone,
         r.correct,
         pct(r.accuracy),
         r.correctAfterRetry,
+        r.hintsUsed,
         r.lessonsCompleted,
         r.vocab.answered,
         r.vocab.correct,
+        r.wordsMet.join('; '),
         r.skills.filter((s) => s.label === 'mastered').map((s) => s.name).join('; '),
         r.skills.filter((s) => s.label === 'needs_practice').map((s) => s.name).join('; '),
         csvTime(r.lastActive),
@@ -534,7 +608,7 @@ export function exportCsv(type: 'profiles' | 'attempts'): string {
     );
   }
   return toCsv(
-    ['Bạn học', 'Bài / trò chơi', 'Loại', 'Trạng thái', 'Bắt đầu', 'Hoàn thành', 'Toán: đúng', 'Toán: tổng', 'Từ vựng: đúng', 'Từ vựng: tổng'],
+    ['Bạn học', 'Bài / trò chơi', 'Loại', 'Trạng thái', 'Bắt đầu', 'Hoàn thành', 'Toán: đúng', 'Toán: tổng', 'Từ vựng: đúng', 'Từ vựng: tổng', 'Số lần trả lời', 'Số lần bấm Gợi ý'],
     rs.flatMap((r) =>
       r.attempts.map((a) => [
         r.profile.nickname,
@@ -547,6 +621,8 @@ export function exportCsv(type: 'profiles' | 'attempts'): string {
         a.mathTotal,
         a.vocabCorrect,
         a.vocabTotal,
+        a.tries,
+        a.hintsUsed,
       ]),
     ),
   );

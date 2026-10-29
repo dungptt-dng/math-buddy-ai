@@ -92,7 +92,7 @@ export default function Parents() {
               <Stat k="Câu Toán đã làm" v={r.questionsDone} />
               <Stat k="Đúng ngay lần đầu" v={pct(r.accuracy)} />
               <Stat k="Bài đã hoàn thành" v={r.lessonsCompleted} />
-              <Stat k="Từ vựng đúng" v={r.vocab.answered ? `${r.vocab.correct}/${r.vocab.answered}` : '—'} />
+              <Stat k="Lần bấm Gợi ý" v={r.hintsUsed} />
             </div>
             {r.correctAfterRetry > 0 && <p className="t-sub">Thêm {r.correctAfterRetry} câu Toán làm đúng sau khi thử lại (không tính vào điểm chính).</p>}
 
@@ -101,6 +101,17 @@ export default function Parents() {
             <p className="t-sub" style={{ fontSize: 13 }}>
               Kỹ năng chỉ được nhận xét khi đã làm ít nhất {engine.MIN_EVIDENCE} câu. Đây là số liệu luyện tập, không phải đánh giá chính thức.
             </p>
+
+            <h3>Làm quen tiếng Anh (tính riêng, không ảnh hưởng điểm Toán)</h3>
+            <div className="t-stats">
+              <Stat k="Câu từ vựng đúng ngay lần đầu" v={r.vocab.answered ? `${r.vocab.correct}/${r.vocab.answered}` : '—'} />
+              <Stat k="Số từ đã gặp" v={r.wordsMet.length} />
+            </div>
+            {r.wordsMet.length > 0 && (
+              <p className="t-sub" lang="en">
+                {r.wordsMet.join(', ')}
+              </p>
+            )}
 
             {r.attempts.length > 0 && (
               <details>
@@ -114,6 +125,8 @@ export default function Parents() {
                         <th>Trạng thái</th>
                         <th className="num">Toán</th>
                         <th className="num">Từ vựng</th>
+                        <th className="num">Lần trả lời</th>
+                        <th className="num">Gợi ý</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -124,6 +137,8 @@ export default function Parents() {
                           <td>{a.status === 'completed' ? 'Hoàn thành' : a.status === 'in_progress' ? 'Đang làm' : 'Bỏ dở'}</td>
                           <td className="num">{a.mathTotal ? `${a.mathCorrect}/${a.mathTotal}` : '—'}</td>
                           <td className="num">{a.vocabTotal ? `${a.vocabCorrect}/${a.vocabTotal}` : '—'}</td>
+                          <td className="num">{a.tries}</td>
+                          <td className="num">{a.hintsUsed}</td>
                         </tr>
                       ))}
                     </tbody>
