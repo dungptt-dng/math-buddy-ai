@@ -3,134 +3,47 @@
 // Chấm điểm vẫn XÁC ĐỊNH theo đáp án chuẩn trong ngân hàng câu hỏi; không dùng AI để chấm.
 import { GAMES, MIN_GAME_QUESTIONS } from '../content/games';
 import { LESSONS } from '../content/lessons';
+import { RETIRED_LESSON_TITLES, RETIRED_QUESTIONS } from '../content/retired';
 import { SKILL_NAMES, toPublic, type Lesson, type Question, type SkillId } from '../content/types';
 import type { AnswerResponse, AttemptState, AttemptSummary, GameCard, LessonCard, Me, Profile, ProfileReport, Result, SkillLabel, SkillStat } from '../types';
 import { csvTime, toCsv } from './csv';
+import { englishReportOf } from './english';
+import { empty, EngineError, load, mutate, ownerOf, save, type Attempt, type Data } from './store';
 import { buddyLines, GAME_REWARD, hintLevelFor } from './feedback';
 import { grade, MAX_TRIES } from './grading';
 
-export class EngineError extends Error {
-  constructor(
-    public code: 'no_learner' | 'not_found' | 'conflict' | 'invalid' | 'denied',
-    message: string,
-  ) {
-    super(message);
-  }
-}
+export { EngineError, useStorage } from './store';
+export {
+  answerEnglish,
+  englishBank,
+  englishResult,
+  englishSummary,
+  finishEnglish,
+  getEnglishAttempt,
+  listEnglishGames,
+  listEnglishTopics,
+  MAX_EN_TRIES,
+  seeWord,
+  startEnglish,
+  startEnglishPractice,
+} from './english';
 
 export const TRIAL_NOTICE = 'Con đang học thử. Kết quả chỉ để con tự xem, không lưu vào tiến độ của bạn nào và sẽ tự xóa sau 7 ngày.';
 export const AVATARS = ['🐱', '🐰', '🐻', '🐶', '🦊', '🐼', '🐸', '🐵', '🦁', '🐯', '🐨', '🐧'];
 /** Một kỹ năng chỉ được nhận xét khi đã có ít nhất chừng này câu. */
 export const MIN_EVIDENCE = 5;
-const TRIAL_TTL_MS = 7 * 24 * 3600_000;
-const STORAGE_KEY = 'mathbuddy.v1';
-
-type QResult = {
-  skill: SkillId;
-  domain: 'math' | 'english';
-  tries: number;
-  /** Số lần con tự bấm nút Gợi ý. */
-  hintsUsed: number;
-  firstTryCorrect: boolean | null;
-  finalCorrect: boolean | null;
-  done: boolean;
-  /** Các câu trả lời hợp lệ con đã gửi, theo thứ tự (dữ liệu cũ có thể không có). */
-  answers?: unknown[];
-};
-type Attempt = {
-  id: number;
-  /** "p:<id>" cho bạn học trên máy, "trial" cho học thử. */
-  owner: string;
-  kind: 'lesson' | 'game';
-  lessonId: string | null;
-  gameId: string | null;
-  questionIds: string[];
-  status: 'in_progress' | 'completed' | 'abandoned';
-  startedAt: string;
-  finishedAt: string | null;
-  results: Record<string, QResult>;
-  /** Từ tiếng Anh Buddy đã giới thiệu trong lần làm bài này (theo dõi riêng với điểm Toán). */
-  words?: { questionId: string; word: string }[];
-};
-type Data = {
-  v: 1;
-  profiles: Profile[];
-  current: { kind: 'profile'; id: string } | { kind: 'trial'; since: string } | null;
-  attempts: Attempt[];
-  nextId: number;
-  /** Lớp của lượt học gần nhất – điền sẵn ô "Tên lớp" (không giữ tên học sinh sau khi kết thúc phiên). */
-  lastClass?: string;
-};
-
-// ---------- Lưu trữ ----------
-
-type KV = Pick<Storage, 'getItem' | 'setItem'>;
-let memory: KV | null = null;
-function backend(): KV {
-  if (memory) return memory;
-  try {
-    const ls = globalThis.localStorage;
-    ls.setItem('mathbuddy.check', '1');
-    ls.removeItem('mathbuddy.check');
-    return ls;
-  } catch {
-    // Chế độ riêng tư / bị chặn lưu trữ: vẫn học được, nhưng chỉ giữ trong lần mở này.
-    const m = new Map<string, string>();
-    memory = { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => void m.set(k, v) };
-    return memory;
-  }
-}
-
-/** Dùng cho kiểm thử: thay nơi lưu trữ. */
-export function useStorage(kv: KV) {
-  memory = kv;
-}
-
-const empty = (): Data => ({ v: 1, profiles: [], current: null, attempts: [], nextId: 1 });
-
-function load(): Data {
-  let d: Data;
-  try {
-    const raw = backend().getItem(STORAGE_KEY);
-    d = raw ? (JSON.parse(raw) as Data) : empty();
-    if (d?.v !== 1 || !Array.isArray(d.attempts) || !Array.isArray(d.profiles)) d = empty();
-  } catch {
-    d = empty();
-  }
-  // Dữ liệu học thử tự xóa sau 7 ngày.
-  const now = Date.now();
-  const oldTrial = (iso: string) => now - new Date(iso).getTime() > TRIAL_TTL_MS;
-  d.attempts = d.attempts.filter((a) => a.owner !== 'trial' || !oldTrial(a.startedAt));
-  if (d.current?.kind === 'trial' && oldTrial(d.current.since)) d.current = null;
-  if (d.current?.kind === 'profile' && !d.profiles.some((p) => p.id === (d.current as { id: string }).id)) d.current = null;
-  return d;
-}
-
-function save(d: Data) {
-  try {
-    backend().setItem(STORAGE_KEY, JSON.stringify(d));
-  } catch {
-    throw new EngineError('conflict', 'Thiết bị đã hết chỗ lưu. Hãy nhờ người lớn xóa bớt dữ liệu cũ trong Góc phụ huynh nhé.');
-  }
-}
-
-/** Đọc – sửa – ghi trong một bước. */
-function mutate<T>(fn: (d: Data) => T): T {
-  const d = load();
-  const out = fn(d);
-  save(d);
-  return out;
-}
 
 // ---------- Ngân hàng nội dung ----------
 
-const QUESTIONS = new Map<string, { q: Question; lesson: Lesson; position: number }>();
+const QUESTIONS = new Map<string, { q: Question; lesson: Lesson | null; position: number }>();
 for (const lesson of LESSONS) lesson.questions.forEach((q, position) => QUESTIONS.set(q.id, { q, lesson, position }));
+// Câu từ vựng bản cũ: không giao cho học sinh nữa, chỉ để bài làm cũ trên máy vẫn mở được.
+RETIRED_QUESTIONS.forEach((q, position) => QUESTIONS.set(q.id, { q, lesson: null, position }));
 /** Học sinh chỉ thấy bài đã duyệt. */
 const APPROVED = LESSONS.filter((l) => l.status === 'approved').sort((a, b) => a.order - b.order);
 const question = (id: string) => QUESTIONS.get(id)!.q;
 const lessonTitle = (a: Attempt) =>
-  a.lessonId ? (LESSONS.find((l) => l.id === a.lessonId)?.title ?? '') : (GAMES.find((g) => g.id === a.gameId)?.title ?? '');
+  a.lessonId ? (LESSONS.find((l) => l.id === a.lessonId)?.title ?? RETIRED_LESSON_TITLES[a.lessonId] ?? '') : (GAMES.find((g) => g.id === a.gameId)?.title ?? '');
 
 /** Bài đã duyệt có nhiều câu nhất cho một kỹ năng. */
 function lessonForSkill(skill: SkillId) {
@@ -145,11 +58,6 @@ function gamePool(skills: SkillId[]): Question[] {
 }
 
 // ---------- Người học ----------
-
-function ownerOf(d: Data): string {
-  if (!d.current) throw new EngineError('no_learner', 'Con chưa vào học. Hãy nhập tên và lớp ở trang đầu, hoặc bấm “Học thử” nhé.');
-  return d.current.kind === 'profile' ? `p:${d.current.id}` : 'trial';
-}
 
 export function me(): Me | null {
   const d = load();
@@ -255,6 +163,7 @@ export function lastClassName(): string {
 export function startTrial() {
   mutate((d) => {
     d.attempts = d.attempts.filter((a) => a.owner !== 'trial');
+    d.english = d.english?.filter((a) => a.owner !== 'trial');
     d.current = { kind: 'trial', since: new Date().toISOString() };
   });
 }
@@ -262,7 +171,10 @@ export function startTrial() {
 /** "Kết thúc phiên học": bạn sau dùng máy không thấy tên bạn trước (chỉ giữ lại tên lớp để điền sẵn). */
 export function signOut() {
   mutate((d) => {
-    if (d.current?.kind === 'trial') d.attempts = d.attempts.filter((a) => a.owner !== 'trial');
+    if (d.current?.kind === 'trial') {
+      d.attempts = d.attempts.filter((a) => a.owner !== 'trial');
+      d.english = d.english?.filter((a) => a.owner !== 'trial');
+    }
     d.current = null;
   });
 }
@@ -271,6 +183,7 @@ export function deleteProfile(id: string) {
   mutate((d) => {
     d.profiles = d.profiles.filter((p) => p.id !== id);
     d.attempts = d.attempts.filter((a) => a.owner !== `p:${id}`);
+    d.english = d.english?.filter((a) => a.owner !== `p:${id}`);
     if (d.current?.kind === 'profile' && d.current.id === id) d.current = null;
   });
 }
@@ -506,6 +419,8 @@ export function answer(attemptId: number, questionId: string, value: unknown): A
       englishWord,
       reward: correct && a.gameId ? GAME_REWARD[a.gameId] : undefined,
       correctAnswer: done ? q.answer : undefined,
+      // Hết lượt: Buddy cùng con xem lời giải Toán bằng tiếng Việt (hiển thị riêng, không trộn vào lời Buddy tiếng Anh).
+      explain: done && !correct ? q.explain : undefined,
     };
   });
 }
@@ -635,12 +550,15 @@ function reportOf(d: Data, p: Profile): ProfileReport {
     profile: p,
     questionsDone: math.length,
     correct,
+    wrong: math.length - correct,
     accuracy: math.length ? correct / math.length : null,
     correctAfterRetry: math.filter((r) => !r.firstTryCorrect && r.finalCorrect).length,
-    lessonsCompleted: new Set(mine.filter((a) => a.status === 'completed' && a.lessonId).map((a) => a.lessonId)).size,
+    lessonsCompleted: new Set(mine.filter((a) => a.status === 'completed' && a.lessonId && APPROVED.some((l) => l.id === a.lessonId)).map((a) => a.lessonId)).size,
+    lessonsTotal: APPROVED.length,
     hintsUsed: answered.reduce((s, r) => s + r.hintsUsed, 0),
     vocab: { answered: eng.length, correct: eng.filter((r) => r.firstTryCorrect).length },
     wordsMet: wordsMet(mine),
+    english: englishReportOf(d, `p:${p.id}`),
     skills: skillStats,
     attempts,
     lastActive: mine.map((a) => a.finishedAt ?? a.startedAt).sort().at(-1) ?? null,
@@ -652,10 +570,43 @@ export function reports(): ProfileReport[] {
   return d.profiles.map((p) => reportOf(d, p));
 }
 
-/** CSV (UTF-8 có BOM) để mở bằng Excel: tổng hợp theo bạn học, hoặc từng lần làm bài. */
-export function exportCsv(type: 'profiles' | 'attempts'): string {
+const EN_LABEL = { good: 'Nhận biết tốt', learning: 'Đang làm quen', review: 'Cần ôn lại', new: 'Mới xem thẻ từ' } as const;
+
+/** CSV (UTF-8 có BOM) để mở bằng Excel: Toán (theo bạn học, từng lần làm bài) và tiếng Anh (theo bạn học, từng từ) – tách riêng. */
+export function exportCsv(type: 'profiles' | 'attempts' | 'english' | 'english-words'): string {
   const rs = reports();
   const pct = (x: number | null) => (x === null ? '' : Math.round(x * 100));
+  const score = (s: { correct: number; total: number }) => (s.total ? `${s.correct}/${s.total}` : '');
+  if (type === 'english') {
+    return toCsv(
+      ['Bạn học', 'Lớp', 'Chủ đề đã hoàn thành', 'Tổng số chủ đề', 'Từ đã làm quen', 'Tổng số từ', 'Câu đúng ngay lần đầu', 'Số câu đã làm', 'Nghe (đúng/tổng)', 'Nhận diện từ (đúng/tổng)', 'Mẫu câu (đúng/tổng)', 'Từ nhận biết tốt', 'Từ cần ôn lại', 'Gợi ý ôn tập', 'Lần học gần nhất'],
+      rs.map(({ profile: p, english: e }) => [
+        p.nickname,
+        p.className ?? '',
+        e.topicsCompleted,
+        e.topicsTotal,
+        e.wordsFamiliar,
+        e.wordsTotal,
+        e.correct,
+        e.answered,
+        score(e.skills.listening),
+        score(e.skills.recognition),
+        score(e.skills.sentence),
+        e.words.filter((w) => w.label === 'good').map((w) => w.text).join('; '),
+        e.words.filter((w) => w.label === 'review').map((w) => w.text).join('; '),
+        e.suggestions.map((x) => x.title).join('; '),
+        csvTime(e.lastActive),
+      ]),
+    );
+  }
+  if (type === 'english-words') {
+    return toCsv(
+      ['Bạn học', 'Lớp', 'Từ', 'Nghĩa', 'Chủ đề', 'Số lần gặp trong câu luyện tập', 'Đúng ngay lần đầu', 'Mức nhận biết'],
+      rs.flatMap(({ profile: p, english: e }) =>
+        e.words.map((w) => [p.nickname, p.className ?? '', w.text, w.vi, e.topics.find((t) => t.id === w.topicId)?.title ?? '', w.answered, w.correct, EN_LABEL[w.label]]),
+      ),
+    );
+  }
   if (type === 'profiles') {
     return toCsv(
       ['Bạn học', 'Lớp', 'Số câu Toán đã làm', 'Số câu đúng (lần đầu)', 'Tỷ lệ đúng (%)', 'Đúng sau khi thử lại', 'Số lần bấm Gợi ý', 'Số bài đã hoàn thành', 'Từ vựng: số câu', 'Từ vựng: số câu đúng', 'Từ tiếng Anh đã làm quen', 'Kỹ năng đã vững', 'Kỹ năng cần ôn', 'Lần học gần nhất'],

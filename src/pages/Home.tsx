@@ -1,6 +1,6 @@
 // Trang đầu: ảnh banner Math Buddy AI phủ toàn màn hình.
 // Chưa vào học: ô "Tên của con", "Tên lớp" và nút Bắt đầu học (rồi chạm con vật của con) – hoặc Học thử.
-// Đang học: lời chào, Học tiếp, Đổi thông tin, Kết thúc phiên học.
+// Đang học: lời chào, hai khu học (Ôn luyện Toán / Làm quen tiếng Anh), Đổi thông tin, Kết thúc phiên học.
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router';
 import { BUDDY_IMG } from '../components/Kid';
@@ -22,6 +22,7 @@ export default function Home() {
   const [me, setMe] = useState(engine.me);
   const profile = me?.mode === 'profile' ? me.profile : null;
   const [lessons] = useState(() => (profile ? engine.listLessons() : null));
+  const [english] = useState(() => (profile ? engine.englishSummary() : null));
   // "Đổi thông tin" ở danh sách bài mở thẳng trang đầu ở chế độ sửa.
   const [editing, setEditing] = useState(() => Boolean(profile && (location.state as { edit?: boolean } | null)?.edit));
   const [error, setError] = useState('');
@@ -84,19 +85,35 @@ export default function Home() {
                 </small>
               </button>
             </h1>
-            <p className="splash-continue">
-              {profile.className && <>Lớp {profile.className} · </>}
-              {current?.status === 'in_progress' ? 'Con đang học dở bài: ' : 'Bài tiếp theo: '}
-              <b>{current?.title ?? 'Xem các bài của con'}</b>
-            </p>
-            <div className="splash-buttons four">
-              <Link className="btn big green wide" to={current?.inProgressAttemptId ? `/lam-bai/${current.inProgressAttemptId}` : '/hoc'}>
-                <span>{current?.status === 'in_progress' ? 'Học tiếp ▶' : 'Vào học ▶'}</span>
+            {profile.className && <p className="splash-continue">Lớp {profile.className} · Hôm nay con muốn học gì?</p>}
+            <div className="splash-areas">
+              <Link className="area-btn math" to="/hoc">
+                <span className="emoji" aria-hidden>
+                  🧮
+                </span>
+                <span>
+                  <b>Ôn luyện Toán</b>
+                  <small lang="en">Math Practice</small>
+                  <em>
+                    {current?.status === 'in_progress' ? 'Đang học dở: ' : 'Bài tiếp theo: '}
+                    {current?.title ?? 'Xem các bài'}
+                  </em>
+                </span>
               </Link>
-              <Link className="btn white" to="/hoc">
-                <span className="emoji">📚</span>
-                <span>Tất cả bài</span>
+              <Link className="area-btn english" to="/tieng-anh">
+                <span className="emoji" aria-hidden>
+                  🔤
+                </span>
+                <span>
+                  <b>Làm quen tiếng Anh</b>
+                  <small lang="en">English Practice</small>
+                  <em>
+                    {english?.suggestion ? `Gợi ý: ${english.suggestion.title}` : `Đã học ${english?.topicsDone ?? 0}/${english?.topicsTotal ?? 0} chủ đề`}
+                  </em>
+                </span>
               </Link>
+            </div>
+            <div className="splash-buttons session">
               <button className="btn white" onClick={() => setEditing(true)}>
                 <span className="emoji">✏️</span>
                 <span>Đổi thông tin</span>

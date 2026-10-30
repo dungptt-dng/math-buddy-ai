@@ -13,6 +13,9 @@ import Lessons from './pages/Lessons';
 import Practice from './pages/Practice';
 import Result from './pages/Result';
 import Parents from './pages/Parents';
+import EnglishTopics from './pages/EnglishTopics';
+import EnglishLesson from './pages/EnglishLesson';
+import EnglishResult from './pages/EnglishResult';
 import Privacy from './pages/Privacy';
 import { KidError, KidLayout } from './components/Kid';
 
@@ -38,6 +41,10 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/hoc" element={<Lessons />} />
         <Route path="/lam-bai/:id" element={<Practice />} />
         <Route path="/ket-qua/:id" element={<Result />} />
+        {/* Khu 2: Làm quen tiếng Anh – bài học, kết quả và tiến độ riêng. */}
+        <Route path="/tieng-anh" element={<EnglishTopics />} />
+        <Route path="/tieng-anh/hoc/:id" element={<EnglishLesson />} />
+        <Route path="/tieng-anh/ket-qua/:id" element={<EnglishResult />} />
         <Route path="/phu-huynh" element={<Parents />} />
         <Route path="/rieng-tu" element={<Privacy />} />
         <Route path="*" element={<NotFound />} />

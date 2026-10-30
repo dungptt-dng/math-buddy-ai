@@ -2,6 +2,7 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import { useSound } from '../speech';
+import type { Me } from '../types';
 
 export const BUDDY_IMG = 'assets/buddy.webp';
 
@@ -30,6 +31,17 @@ export function KidLayout({ children, right }: { children: ReactNode; right?: Re
         {children}
       </main>
     </div>
+  );
+}
+
+/** Tên (hoặc "Học thử") ở góc trên – chạm để về trang đầu. */
+export function LearnerChip({ me }: { me: Me }) {
+  if (me.mode === 'trial') return <span className="chip trial">⭐ Học thử</span>;
+  return (
+    <Link className="chip" to="/" title="Về trang đầu">
+      {me.profile.avatar} {me.profile.nickname}
+      {me.profile.className && ` · ${me.profile.className}`}
+    </Link>
   );
 }
 

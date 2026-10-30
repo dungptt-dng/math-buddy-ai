@@ -227,6 +227,17 @@ export default function Practice() {
           </p>
         )}
 
+        {feedback?.done && feedback.explain && (
+          <div className="hint-box explain-box" role="note" lang="vi">
+            <span className="emoji" aria-hidden>
+              📘
+            </span>
+            <span>
+              <b>Cùng hiểu bài:</b> {feedback.explain}
+            </span>
+          </div>
+        )}
+
         {hint && !feedback && (
           <div className="hint-box" role="note">
             <span className="emoji" aria-hidden>

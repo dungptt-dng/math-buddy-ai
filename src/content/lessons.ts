@@ -19,7 +19,6 @@ import {
   sequence,
   story,
   subPictures,
-  vocab,
   whichExpression,
 } from './builders';
 import type { Lesson } from './types';
@@ -69,26 +68,6 @@ const numbers: Lesson = {
       prompt: 'Có tất cả bao nhiêu quả? (gồm cả táo và dâu tây)',
       left: { icon: 'apple', count: 3 },
       right: { icon: 'strawberry', count: 4 },
-    }),
-    vocab({
-      id: 'n10-v1',
-      level: 1,
-      word: 'number',
-      prompt: 'Từ tiếng Anh này có nghĩa là gì?',
-      labels: ['Số', 'Hình', 'Dấu bằng'],
-      correct: 'Số',
-      hint: '“Number” là thứ con dùng để đếm: 1, 2, 3…',
-      explain: '“Number” nghĩa là số.',
-    }),
-    vocab({
-      id: 'n10-v2',
-      level: 1,
-      word: 'three',
-      prompt: 'Từ tiếng Anh này là số mấy?',
-      labels: ['2', '3', '5'],
-      correct: '3',
-      hint: 'Đếm bằng tiếng Anh: one, two, three…',
-      explain: '“Three” là số 3.',
     }),
   ],
 };
@@ -172,26 +151,6 @@ const compare: Lesson = {
         steps: ['Find the smallest: 2, 6 or 9?', 'Then the next one.', 'Which order starts small and ends big?'],
       },
     }),
-    vocab({
-      id: 'cmp-v1',
-      level: 1,
-      word: 'more',
-      prompt: 'Từ tiếng Anh này có nghĩa là gì?',
-      labels: ['Nhiều hơn', 'Ít hơn', 'Bằng nhau'],
-      correct: 'Nhiều hơn',
-      hint: 'Khi muốn thêm kẹo, các bạn nhỏ nói “more, please!”.',
-      explain: '“More” nghĩa là nhiều hơn.',
-    }),
-    vocab({
-      id: 'cmp-v2',
-      level: 1,
-      word: 'less',
-      prompt: 'Từ tiếng Anh này có nghĩa là gì?',
-      labels: ['Nhiều hơn', 'Ít hơn', 'Bằng nhau'],
-      correct: 'Ít hơn',
-      hint: '“Less” ngược nghĩa với “more”.',
-      explain: '“Less” nghĩa là ít hơn.',
-    }),
   ],
 };
 
@@ -225,26 +184,6 @@ const addition: Lesson = {
     }),
     story({ id: 'add-12', level: 3, text: 'Bình có 6 cái kẹo. Mẹ cho Bình thêm 2 cái kẹo. Bình có tất cả mấy cái kẹo?', a: 6, op: '+', b: 2, icon: 'candy' }),
     whichExpression({ id: 'add-13', level: 3, target: 9, exprs: [[4, '+', 5], [3, '+', 5], [6, '+', 2]] }),
-    vocab({
-      id: 'add-v1',
-      level: 1,
-      word: 'plus',
-      prompt: 'Từ tiếng Anh này là dấu nào?',
-      labels: ['+', '−', '='],
-      correct: '+',
-      hint: '“Two plus one” nghĩa là hai cộng một.',
-      explain: '“Plus” là dấu cộng (+).',
-    }),
-    vocab({
-      id: 'add-v2',
-      level: 1,
-      word: 'equal',
-      prompt: 'Từ tiếng Anh này là dấu nào?',
-      labels: ['+', '−', '='],
-      correct: '=',
-      hint: '“Equal” nghĩa là bằng nhau.',
-      explain: '“Equal” là dấu bằng (=).',
-    }),
   ],
 };
 
@@ -272,26 +211,6 @@ const subtraction: Lesson = {
     story({ id: 'sub-11', level: 3, text: 'Trên đĩa có 8 quả dâu tây. Bé ăn 3 quả. Trên đĩa còn lại mấy quả dâu tây?', a: 8, op: '-', b: 3, icon: 'strawberry' }),
     story({ id: 'sub-12', level: 3, text: 'Có 7 con vịt đang bơi, 4 con lên bờ. Còn mấy con vịt đang bơi?', a: 7, op: '-', b: 4, icon: 'duck' }),
     whichExpression({ id: 'sub-13', level: 3, target: 2, exprs: [[6, '-', 4], [5, '-', 2], [8, '-', 5]] }),
-    vocab({
-      id: 'sub-v1',
-      level: 1,
-      word: 'minus',
-      prompt: 'Từ tiếng Anh này là dấu nào?',
-      labels: ['+', '−', '='],
-      correct: '−',
-      hint: '“Five minus one” nghĩa là năm trừ một.',
-      explain: '“Minus” là dấu trừ (−).',
-    }),
-    vocab({
-      id: 'sub-v2',
-      level: 1,
-      word: 'equal',
-      prompt: 'Từ tiếng Anh này là dấu nào?',
-      labels: ['+', '−', '='],
-      correct: '=',
-      hint: '“Equal” nghĩa là bằng nhau.',
-      explain: '“Equal” là dấu bằng (=).',
-    }),
   ],
 };
 
@@ -332,36 +251,6 @@ const shapes: Lesson = {
       },
     }),
     oddShape({ id: 'shp-11', level: 3, shapes: ['triangle', 'triangle', 'circle', 'triangle'] }),
-    vocab({
-      id: 'shp-v1',
-      level: 1,
-      word: 'circle',
-      prompt: 'Chọn hình có tên tiếng Anh này.',
-      shapes: ['square', 'circle', 'triangle'],
-      correct: 'circle',
-      hint: '“Circle” tròn tròn như quả bóng nhìn từ phía trước.',
-      explain: '“Circle” là hình tròn.',
-    }),
-    vocab({
-      id: 'shp-v2',
-      level: 1,
-      word: 'triangle',
-      prompt: 'Chọn hình có tên tiếng Anh này.',
-      shapes: ['triangle', 'square', 'circle'],
-      correct: 'triangle',
-      hint: '“Tri” nghĩa là ba – hình này có 3 góc.',
-      explain: '“Triangle” là hình tam giác.',
-    }),
-    vocab({
-      id: 'shp-v3',
-      level: 1,
-      word: 'square',
-      prompt: 'Chọn hình có tên tiếng Anh này.',
-      shapes: ['circle', 'triangle', 'square'],
-      correct: 'square',
-      hint: '“Square” có 4 cạnh dài bằng nhau.',
-      explain: '“Square” là hình vuông.',
-    }),
   ],
 };
 
@@ -485,31 +374,6 @@ const length: Lesson = {
   ],
 };
 
-const vocabLesson: Lesson = {
-  id: 'english-words',
-  title: 'Làm quen từ vựng Toán tiếng Anh',
-  topic: 'Từ vựng tiếng Anh',
-  icon: 'abc',
-  order: 20,
-  domain: 'english',
-  status: 'approved',
-  sourceNote: 'Danh sách từ vựng lấy theo yêu cầu sản phẩm (number, add, plus, minus, equal, more, less, circle, triangle, square) và số đếm cơ bản. Chưa đối chiếu với chương trình tiếng Anh lớp 1.',
-  verification: 'pending',
-  questions: [
-    vocab({ id: 'eng-01', level: 1, word: 'number', prompt: 'Từ này có nghĩa là gì?', labels: ['Số', 'Hình', 'Dấu cộng'], correct: 'Số', hint: '“Number” là thứ con dùng để đếm: 1, 2, 3…', explain: '“Number” nghĩa là số.' }),
-    vocab({ id: 'eng-02', level: 1, word: 'add', prompt: 'Từ này có nghĩa là gì?', labels: ['Cộng thêm', 'Bớt đi', 'So sánh'], correct: 'Cộng thêm', hint: '“Add one more” – thêm một cái nữa.', explain: '“Add” nghĩa là cộng, thêm vào.' }),
-    vocab({ id: 'eng-03', level: 1, word: 'plus', prompt: 'Từ này là dấu nào?', labels: ['+', '−', '='], correct: '+', hint: '“Two plus one” nghĩa là hai cộng một.', explain: '“Plus” là dấu cộng (+).' }),
-    vocab({ id: 'eng-04', level: 1, word: 'minus', prompt: 'Từ này là dấu nào?', labels: ['+', '−', '='], correct: '−', hint: '“Five minus one” nghĩa là năm trừ một.', explain: '“Minus” là dấu trừ (−).' }),
-    vocab({ id: 'eng-05', level: 1, word: 'equal', prompt: 'Từ này là dấu nào?', labels: ['+', '−', '='], correct: '=', hint: '“Equal” nghĩa là bằng nhau.', explain: '“Equal” là dấu bằng (=).' }),
-    vocab({ id: 'eng-06', level: 1, word: 'more', prompt: 'Từ này có nghĩa là gì?', labels: ['Nhiều hơn', 'Ít hơn'], correct: 'Nhiều hơn', hint: 'Khi muốn thêm kẹo, các bạn nhỏ nói “more, please!”.', explain: '“More” nghĩa là nhiều hơn.' }),
-    vocab({ id: 'eng-07', level: 1, word: 'less', prompt: 'Từ này có nghĩa là gì?', labels: ['Nhiều hơn', 'Ít hơn'], correct: 'Ít hơn', hint: '“Less” ngược nghĩa với “more”.', explain: '“Less” nghĩa là ít hơn.' }),
-    vocab({ id: 'eng-08', level: 1, word: 'circle', prompt: 'Chọn hình có tên tiếng Anh này.', shapes: ['square', 'circle', 'triangle'], correct: 'circle', hint: '“Circle” tròn tròn như mặt trăng rằm.', explain: '“Circle” là hình tròn.' }),
-    vocab({ id: 'eng-09', level: 1, word: 'triangle', prompt: 'Chọn hình có tên tiếng Anh này.', shapes: ['circle', 'square', 'triangle'], correct: 'triangle', hint: '“Tri” nghĩa là ba – hình này có 3 góc.', explain: '“Triangle” là hình tam giác.' }),
-    vocab({ id: 'eng-10', level: 1, word: 'square', prompt: 'Chọn hình có tên tiếng Anh này.', shapes: ['square', 'triangle', 'circle'], correct: 'square', hint: '“Square” có 4 cạnh dài bằng nhau.', explain: '“Square” là hình vuông.' }),
-    vocab({ id: 'eng-11', level: 1, word: 'seven', prompt: 'Từ này là số mấy?', labels: ['6', '7', '9'], correct: '7', hint: 'Đếm bằng tiếng Anh: …five, six, seven.', explain: '“Seven” là số 7.' }),
-    vocab({ id: 'eng-12', level: 1, word: 'ten', prompt: 'Từ này là số mấy?', labels: ['10', '2', '8'], correct: '10', hint: '“Ten” là số lớn nhất khi con đếm hết hai bàn tay.', explain: '“Ten” là số 10.' }),
-  ],
-};
 
 /** Bài nháp – minh họa trạng thái kiểm duyệt; KHÔNG hiển thị cho học sinh. */
 const numbers20: Lesson = {
@@ -528,4 +392,4 @@ const numbers20: Lesson = {
   ],
 };
 
-export const LESSONS: Lesson[] = [numbers, compare, addition, subtraction, shapes, length, numbers20, vocabLesson];
+export const LESSONS: Lesson[] = [numbers, compare, addition, subtraction, shapes, length, numbers20];

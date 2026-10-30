@@ -151,11 +151,13 @@ test('điểm chính thức = đúng ngay lần đầu; đúng khi thử lại �
   assert.equal(result.trialNotice, null);
 });
 
-test('câu Toán đứng trước câu từ vựng trong bài', () => {
+test('bài Toán chỉ có câu Toán (tiếng Anh là khu học riêng)', () => {
   engine.createProfile('Bé Gấu', '🐻');
-  const a = engine.startAttempt({ lessonId: 'add-10' });
-  const firstEnglish = a.questions.findIndex((q) => q.domain === 'english');
-  assert.ok(firstEnglish > 0 && a.questions.slice(firstEnglish).every((q) => q.domain === 'english'));
+  for (const l of engine.listLessons()) {
+    assert.equal(l.domain, 'math', l.id);
+    const a = engine.startAttempt({ lessonId: l.id });
+    assert.ok(a.questions.every((q) => q.domain === 'math'), l.id);
+  }
 });
 
 // ---------- Tiêu chí nghiệm thu: Buddy phản hồi bằng tiếng Anh ----------
@@ -312,10 +314,10 @@ test('lưu câu trả lời thật, số lần thử, số gợi ý; tiếng Anh
   const r = engine.reports()[0];
   assert.equal(r.hintsUsed, 1);
   assert.equal(r.attempts[0].tries, a.questions.length + 1);
-  assert.ok(r.wordsMet.includes('plus'), 'từ đã gặp gồm từ ở câu từ vựng');
-  assert.equal(r.vocab.answered, 2);
-  assert.equal(r.questionsDone, a.questions.length - 2, 'câu từ vựng không tính vào số câu Toán');
-  assert.ok(engine.exportCsv('profiles').includes('plus'));
+  assert.equal(r.vocab.answered, 0, 'bài Toán không còn câu từ vựng');
+  assert.equal(r.questionsDone, a.questions.length);
+  assert.equal(r.english.answered, 0, 'làm bài Toán không tạo kết quả tiếng Anh');
+  for (const w of r.wordsMet) assert.ok(engine.exportCsv('profiles').includes(w), 'từ Buddy giới thiệu có trong CSV');
 });
 
 test('chưa làm xong thì không kết thúc được bài', () => {

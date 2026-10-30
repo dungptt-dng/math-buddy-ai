@@ -1,7 +1,8 @@
-// Màn hình quan trọng nhất của học sinh: chọn bài để ôn luyện.
+// Khu 1 – Ôn luyện Toán (Math Practice): chọn bài Toán lớp 1 để ôn luyện bằng tiếng Việt, và trò chơi Toán.
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { BUDDY_IMG, KidError, KidLayout, Loading } from '../components/Kid';
+import { AreaTabs } from '../components/AreaTabs';
+import { BUDDY_IMG, KidError, KidLayout, LearnerChip, Loading } from '../components/Kid';
 import { LessonArt } from '../components/LessonArt';
 import * as engine from '../engine';
 import type { GameCard, LessonCard, Me } from '../types';
@@ -52,17 +53,7 @@ export default function Lessons() {
   }
 
   const math = data?.lessons.filter((l) => l.domain === 'math') ?? [];
-  const english = data?.lessons.filter((l) => l.domain === 'english') ?? [];
-  const chip = data ? (
-    data.me.mode === 'trial' ? (
-      <span className="chip trial">⭐ Học thử</span>
-    ) : (
-      <Link className="chip" to="/" title="Về trang đầu">
-        {data.me.profile.avatar} {data.me.profile.nickname}
-        {data.me.profile.className && ` · ${data.me.profile.className}`}
-      </Link>
-    )
-  ) : undefined;
+  const mathDone = math.filter((l) => l.status === 'completed').length;
 
   // Kết thúc phiên học: bạn sau dùng chung máy không thấy tên, bài của bạn trước.
   const endSession = () => {
@@ -71,7 +62,8 @@ export default function Lessons() {
   };
 
   return (
-    <KidLayout right={chip}>
+    <KidLayout right={data && <LearnerChip me={data.me} />}>
+      <AreaTabs active="math" />
       {error && <KidError message={error.message} onRetry={load} />}
       {!data && !error && <Loading />}
       {data && (
@@ -81,7 +73,7 @@ export default function Lessons() {
             <div className="hello-text">
               {data.me.mode === 'profile' ? (
                 <>
-                  <p className="hello-title">Chào {data.me.profile.nickname}! Cùng Buddy ôn Toán nhé!</p>
+                  <p className="hello-title">Chào {data.me.profile.nickname}! Cùng Buddy học nhé!</p>
                   {data.me.profile.className && <p className="hello-sub">Lớp {data.me.profile.className}</p>}
                 </>
               ) : (
@@ -106,7 +98,12 @@ export default function Lessons() {
             </div>
           )}
           <h1 className="section-title" style={{ marginTop: 6 }}>
-            <span className="emoji">📚</span> Con muốn ôn bài nào?
+            <span className="emoji">📚</span> Con muốn ôn bài Toán nào?
+            {math.length > 0 && (
+              <span className="section-progress">
+                Đã hoàn thành {mathDone}/{math.length} bài
+              </span>
+            )}
           </h1>
           {math.length === 0 && (
             <div className="card">
@@ -146,18 +143,6 @@ export default function Lessons() {
             </>
           )}
 
-          {english.length > 0 && (
-            <>
-              <h2 className="section-title">
-                <span className="emoji">🔤</span> Làm quen tiếng Anh
-              </h2>
-              <div className="lesson-grid">
-                {english.map((l) => (
-                  <LessonButton key={l.id} l={l} busy={starting === l.id} onStart={() => (l.inProgressAttemptId ? nav(`/lam-bai/${l.inProgressAttemptId}`) : start({ lessonId: l.id }, l.id))} />
-                ))}
-              </div>
-            </>
-          )}
         </>
       )}
     </KidLayout>
@@ -165,7 +150,7 @@ export default function Lessons() {
 }
 
 function LessonButton({ l, onStart, busy }: { l: LessonCard; onStart: () => void; busy: boolean }) {
-  const score = l.last ? (l.domain === 'english' ? `${l.last.vocabCorrect}/${l.last.vocabTotal}` : `${l.last.mathCorrect}/${l.last.mathTotal}`) : null;
+  const score = l.last ? `${l.last.mathCorrect}/${l.last.mathTotal}` : null;
   return (
     <button className="lesson-card" onClick={onStart} disabled={busy}>
       <LessonArt icon={l.icon} />
