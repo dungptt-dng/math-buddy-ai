@@ -108,7 +108,8 @@ export type Result = {
   trialNotice: string | null;
 };
 
-export type Profile = { id: string; nickname: string; avatar: string; createdAt: string };
+/** className: tên lớp con tự nhập (VD "1A"); dữ liệu cũ có thể chưa có. Tên và lớp chỉ để hiển thị, không phải thông tin xác thực. */
+export type Profile = { id: string; nickname: string; className?: string; avatar: string; createdAt: string };
 
 export type Me = { mode: 'profile'; profile: Profile } | { mode: 'trial'; notice: string };
 

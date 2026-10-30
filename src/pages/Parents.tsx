@@ -75,7 +75,7 @@ export default function Parents() {
         {reports.length === 0 && (
           <div className="t-card">
             <p style={{ margin: 0 }}>
-              Chưa có bạn nào học trên thiết bị này. Trẻ bấm <b>Vào học</b> ở trang đầu và chọn tên để bắt đầu lưu kết quả.
+              Chưa có bạn nào học trên thiết bị này. Trẻ nhập <b>tên và lớp</b> ở trang đầu, bấm <b>Bắt đầu học</b> rồi chọn một con vật để bắt đầu lưu kết quả.
             </p>
           </div>
         )}
@@ -85,6 +85,7 @@ export default function Parents() {
             <div className="t-row" style={{ justifyContent: 'space-between' }}>
               <h2 style={{ margin: 0 }}>
                 <span className="emoji">{r.profile.avatar}</span> {r.profile.nickname}
+                {r.profile.className && <span className="t-sub" style={{ fontSize: 17 }}> · Lớp {r.profile.className}</span>}
               </h2>
               <span className="t-sub">Học gần nhất: {fmtDate(r.lastActive)}</span>
             </div>

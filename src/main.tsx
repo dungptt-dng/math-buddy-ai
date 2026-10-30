@@ -1,7 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 // HashRouter: ứng dụng tĩnh (GitHub Pages) không có máy chủ để trả trang cho mọi đường dẫn, nên đường dẫn nằm sau dấu #.
-import { HashRouter, Link, Route, Routes } from 'react-router';
+import { HashRouter, Link, Navigate, Route, Routes } from 'react-router';
 import '@fontsource/nunito/400.css';
 import '@fontsource/nunito/600.css';
 import '@fontsource/nunito/700.css';
@@ -9,7 +9,6 @@ import '@fontsource/nunito/800.css';
 import '@fontsource/nunito/900.css';
 import './styles.css';
 import Home from './pages/Home';
-import ChooseProfile from './pages/ChooseProfile';
 import Lessons from './pages/Lessons';
 import Practice from './pages/Practice';
 import Result from './pages/Result';
@@ -34,7 +33,8 @@ createRoot(document.getElementById('root')!).render(
     <HashRouter>
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/chon-ban" element={<ChooseProfile />} />
+        {/* Màn chọn tên cũ đã thay bằng ô nhập tên + lớp ở trang đầu; giữ đường dẫn cho liên kết đã lưu. */}
+        <Route path="/chon-ban" element={<Navigate to="/" replace />} />
         <Route path="/hoc" element={<Lessons />} />
         <Route path="/lam-bai/:id" element={<Practice />} />
         <Route path="/ket-qua/:id" element={<Result />} />

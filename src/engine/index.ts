@@ -11,7 +11,7 @@ import { grade, MAX_TRIES } from './grading';
 
 export class EngineError extends Error {
   constructor(
-    public code: 'no_learner' | 'not_found' | 'conflict' | 'invalid',
+    public code: 'no_learner' | 'not_found' | 'conflict' | 'invalid' | 'denied',
     message: string,
   ) {
     super(message);
@@ -58,6 +58,8 @@ type Data = {
   current: { kind: 'profile'; id: string } | { kind: 'trial'; since: string } | null;
   attempts: Attempt[];
   nextId: number;
+  /** Lớp của lượt học gần nhất – điền sẵn ô "Tên lớp" (không giữ tên học sinh sau khi kết thúc phiên). */
+  lastClass?: string;
 };
 
 // ---------- Lưu trữ ----------
@@ -145,7 +147,7 @@ function gamePool(skills: SkillId[]): Question[] {
 // ---------- Người học ----------
 
 function ownerOf(d: Data): string {
-  if (!d.current) throw new EngineError('no_learner', 'Con chưa chọn tên. Hãy bấm “Vào học” hoặc “Học thử” ở trang đầu nhé.');
+  if (!d.current) throw new EngineError('no_learner', 'Con chưa vào học. Hãy nhập tên và lớp ở trang đầu, hoặc bấm “Học thử” nhé.');
   return d.current.kind === 'profile' ? `p:${d.current.id}` : 'trial';
 }
 
@@ -161,26 +163,92 @@ export function listProfiles(): Profile[] {
   return load().profiles;
 }
 
-export function createProfile(nickname: string, avatar: string): Profile {
-  const name = nickname.replace(/\s+/g, ' ').trim();
-  if (name.length < 1 || name.length > 20) throw new EngineError('invalid', 'Tên của con cần từ 1 đến 20 chữ nhé.');
+export const MAX_NAME = 20;
+export const MAX_CLASS = 10;
+/** Gộp khoảng trắng, bỏ khoảng trắng đầu/cuối, chuẩn hóa dấu tiếng Việt (bàn phím có thể gõ dấu tách rời). */
+const tidy = (s: string) => s.normalize('NFC').replace(/\s+/g, ' ').trim();
+const lower = (s: string) => s.toLocaleLowerCase('vi');
+
+/** Tên của con: chữ cái (có dấu), số, khoảng trắng và . ' - ; phải có ít nhất một chữ cái. */
+export function cleanName(raw: string): string {
+  const name = tidy(raw);
+  if (!name) throw new EngineError('invalid', 'Con hãy nhập tên của con nhé.');
+  if (name.length > MAX_NAME) throw new EngineError('invalid', `Tên dài quá rồi. Con viết ngắn hơn, tối đa ${MAX_NAME} chữ nhé.`);
+  if (!/^[\p{L}\p{M}\p{N} .'-]+$/u.test(name) || !/\p{L}/u.test(name)) throw new EngineError('invalid', 'Tên chỉ gồm chữ cái và số thôi con nhé.');
+  return name;
+}
+
+/** Tên lớp: "lớp 1a" → "1A". */
+export function cleanClassName(raw: string): string {
+  const cls = tidy(raw)
+    .replace(/^lớp\s*/iu, '')
+    .toLocaleUpperCase('vi');
+  if (!cls) throw new EngineError('invalid', 'Con hãy nhập tên lớp nhé.');
+  if (cls.length > MAX_CLASS || !/^[\p{L}\p{M}\p{N} .\/-]+$/u.test(cls) || !/[\p{L}\p{N}]/u.test(cls)) {
+    throw new EngineError('invalid', 'Tên lớp viết ngắn gọn như 1A, 1B con nhé.');
+  }
+  return cls;
+}
+
+const sameLearner = (p: Profile, name: string, cls: string) => lower(p.nickname) === lower(name) && lower(p.className ?? '') === lower(cls);
+const DUPLICATE = 'Trên máy đã có bạn cùng tên ở lớp này. Con thêm một chữ để khác đi nhé (VD: Minh Anh, Minh 2).';
+
+export function createProfile(nickname: string, avatar: string, className = ''): Profile {
+  const name = cleanName(nickname);
+  const cls = className ? cleanClassName(className) : '';
   if (!AVATARS.includes(avatar)) throw new EngineError('invalid', 'Con hãy chọn một con vật nhé.');
   return mutate((d) => {
-    if (d.profiles.some((p) => p.nickname.toLocaleLowerCase('vi') === name.toLocaleLowerCase('vi'))) {
-      throw new EngineError('conflict', 'Đã có bạn tên này trên máy. Con chọn tên đó trong danh sách, hoặc thêm một chữ để khác đi nhé.');
-    }
+    if (d.profiles.some((p) => sameLearner(p, name, cls))) throw new EngineError('conflict', DUPLICATE);
     const p: Profile = { id: `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, nickname: name, avatar, createdAt: new Date().toISOString() };
+    if (cls) p.className = d.lastClass = cls;
     d.profiles.push(p);
     d.current = { kind: 'profile', id: p.id };
     return p;
   });
 }
 
-export function chooseProfile(id: string) {
-  mutate((d) => {
-    if (!d.profiles.some((p) => p.id === id)) throw new EngineError('not_found', 'Không tìm thấy bạn này trên máy.');
-    d.current = { kind: 'profile', id };
+/**
+ * "Bắt đầu học" ở trang đầu: tên + lớp + con vật.
+ * Tên và lớp không phải mật khẩu: muốn vào lại kết quả đã lưu của một bạn, phải chạm đúng con vật bạn đó đã chọn lần đầu.
+ * Bạn mới thì con vật vừa chạm trở thành con vật của bạn ấy.
+ */
+export function enterLearner(nickname: string, className: string, avatar: string): Profile {
+  const name = cleanName(nickname);
+  const cls = cleanClassName(className);
+  if (!AVATARS.includes(avatar)) throw new EngineError('invalid', 'Con hãy chọn một con vật nhé.');
+  const d = load();
+  const known =
+    d.profiles.find((p) => sameLearner(p, name, cls)) ??
+    // Bạn tạo từ bản cũ (chưa có lớp): nhận lại nếu đúng tên và đúng con vật, rồi ghi thêm lớp.
+    d.profiles.find((p) => !p.className && lower(p.nickname) === lower(name) && p.avatar === avatar);
+  if (!known) return createProfile(name, avatar, cls);
+  if (known.avatar !== avatar) throw new EngineError('denied', 'Chưa đúng con vật của con rồi. Con nhớ lại và chạm lại nhé!');
+  return mutate((d) => {
+    const p = d.profiles.find((x) => x.id === known.id)!;
+    p.className = d.lastClass = cls;
+    d.current = { kind: 'profile', id: p.id };
+    return p;
   });
+}
+
+/** "Đổi thông tin": sửa tên hoặc lớp của bạn đang học (kết quả cũ giữ nguyên). */
+export function updateLearner(nickname: string, className: string): Profile {
+  const name = cleanName(nickname);
+  const cls = cleanClassName(className);
+  return mutate((d) => {
+    const cur = d.current;
+    if (cur?.kind !== 'profile') throw new EngineError('no_learner', 'Con chưa vào học. Hãy nhập tên và lớp ở trang đầu nhé.');
+    if (d.profiles.some((p) => p.id !== cur.id && sameLearner(p, name, cls))) throw new EngineError('conflict', DUPLICATE);
+    const p = d.profiles.find((x) => x.id === cur.id)!;
+    p.nickname = name;
+    p.className = d.lastClass = cls;
+    return p;
+  });
+}
+
+/** Lớp của lượt học gần nhất trên máy này (để điền sẵn), hoặc "". */
+export function lastClassName(): string {
+  return load().lastClass ?? '';
 }
 
 /** Mỗi lần bấm Học thử là một phiên mới: dữ liệu học thử cũ được xóa. */
@@ -191,6 +259,7 @@ export function startTrial() {
   });
 }
 
+/** "Kết thúc phiên học": bạn sau dùng máy không thấy tên bạn trước (chỉ giữ lại tên lớp để điền sẵn). */
 export function signOut() {
   mutate((d) => {
     if (d.current?.kind === 'trial') d.attempts = d.attempts.filter((a) => a.owner !== 'trial');
@@ -589,9 +658,10 @@ export function exportCsv(type: 'profiles' | 'attempts'): string {
   const pct = (x: number | null) => (x === null ? '' : Math.round(x * 100));
   if (type === 'profiles') {
     return toCsv(
-      ['Bạn học', 'Số câu Toán đã làm', 'Số câu đúng (lần đầu)', 'Tỷ lệ đúng (%)', 'Đúng sau khi thử lại', 'Số lần bấm Gợi ý', 'Số bài đã hoàn thành', 'Từ vựng: số câu', 'Từ vựng: số câu đúng', 'Từ tiếng Anh đã làm quen', 'Kỹ năng đã vững', 'Kỹ năng cần ôn', 'Lần học gần nhất'],
+      ['Bạn học', 'Lớp', 'Số câu Toán đã làm', 'Số câu đúng (lần đầu)', 'Tỷ lệ đúng (%)', 'Đúng sau khi thử lại', 'Số lần bấm Gợi ý', 'Số bài đã hoàn thành', 'Từ vựng: số câu', 'Từ vựng: số câu đúng', 'Từ tiếng Anh đã làm quen', 'Kỹ năng đã vững', 'Kỹ năng cần ôn', 'Lần học gần nhất'],
       rs.map((r) => [
         r.profile.nickname,
+        r.profile.className ?? '',
         r.questionsDone,
         r.correct,
         pct(r.accuracy),
@@ -608,10 +678,11 @@ export function exportCsv(type: 'profiles' | 'attempts'): string {
     );
   }
   return toCsv(
-    ['Bạn học', 'Bài / trò chơi', 'Loại', 'Trạng thái', 'Bắt đầu', 'Hoàn thành', 'Toán: đúng', 'Toán: tổng', 'Từ vựng: đúng', 'Từ vựng: tổng', 'Số lần trả lời', 'Số lần bấm Gợi ý'],
+    ['Bạn học', 'Lớp', 'Bài / trò chơi', 'Loại', 'Trạng thái', 'Bắt đầu', 'Hoàn thành', 'Toán: đúng', 'Toán: tổng', 'Từ vựng: đúng', 'Từ vựng: tổng', 'Số lần trả lời', 'Số lần bấm Gợi ý'],
     rs.flatMap((r) =>
       r.attempts.map((a) => [
         r.profile.nickname,
+        r.profile.className ?? '',
         a.title,
         a.kind === 'lesson' ? 'Bài ôn luyện' : 'Trò chơi',
         a.status === 'completed' ? 'Hoàn thành' : a.status === 'in_progress' ? 'Đang làm' : 'Bỏ dở',

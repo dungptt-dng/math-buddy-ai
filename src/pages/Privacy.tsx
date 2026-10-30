@@ -13,8 +13,15 @@ export default function Privacy() {
         <h2>Dữ liệu được lưu</h2>
         <ul>
           <li>
-            <b>Tên gọi và con vật đại diện</b> mà trẻ chọn khi bấm “Vào học”. Nên dùng biệt danh, không cần họ tên đầy đủ. Ứng dụng không hỏi email, số
-            điện thoại, ảnh hay giọng nói.
+            <b>Tên gọi, tên lớp và con vật đại diện</b> mà trẻ nhập ở trang đầu. Nên dùng tên gọi hoặc biệt danh, không cần họ tên đầy đủ. Ứng dụng
+            không hỏi email, số điện thoại, mật khẩu, ảnh hay giọng nói.
+          </li>
+          <li>
+            Tên và lớp chỉ để Buddy chào và tách riêng kết quả từng bạn, <b>không phải mật khẩu</b>. Muốn xem lại kết quả đã lưu, trẻ phải chạm đúng
+            con vật đã chọn lần đầu – đây là cách nhận ra nhẹ nhàng cho trẻ nhỏ, không phải bảo mật thật sự.
+          </li>
+          <li>
+            Bấm <b>Kết thúc phiên học</b> khi học xong để bạn sau dùng chung máy không thấy tên của con. Máy chỉ nhớ tên lớp để điền sẵn.
           </li>
           <li>
             <b>Kết quả luyện tập:</b> câu đúng/sai, số lần thử, số gợi ý đã xem và thời điểm làm bài – để trẻ và người lớn xem lại tiến bộ.

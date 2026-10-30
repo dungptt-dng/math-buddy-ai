@@ -44,9 +44,10 @@ Nếu kiểm thử lỗi, trang trực tuyến giữ nguyên bản cũ.
 
 | Đường dẫn | Màn hình |
 |---|---|
-| `#/` | **Trang đầu**: ảnh banner phủ toàn màn hình, lời chào của Buddy, nút chính **Vào học** và nút phụ **Học thử** |
-| `#/chon-ban` | **Vào học**: con chọn tên của mình, hoặc thêm bạn mới (biệt danh + một con vật). Nhiều bạn dùng chung một máy vẫn được tách riêng kết quả. |
-| `#/hoc` | **Danh sách bài**: tên, hình, trạng thái *Chưa luyện / Đang luyện / Đã hoàn thành*, kết quả gần nhất; 3 trò chơi; khu từ vựng tiếng Anh |
+| `#/` | **Trang đầu**: ảnh banner phủ toàn màn hình. Chưa vào học: ô **Tên của con**, **Tên lớp**, nút **Bắt đầu học** (rồi chạm con vật của con) và nút phụ **Học thử**. Đang học: lời chào, **Học tiếp**, **Đổi thông tin**, **Kết thúc phiên học**. |
+| `#/hoc` | **Danh sách bài**: lời chào “Chào Minh! Cùng Buddy ôn Toán nhé!”; tên, hình, trạng thái *Chưa luyện / Đang luyện / Đã hoàn thành*, kết quả gần nhất; 3 trò chơi; khu từ vựng tiếng Anh |
+
+**Tên và lớp không phải mật khẩu.** Bạn mới chọn một con vật; lần sau nhập lại đúng tên + lớp và chạm đúng con vật đó mới xem tiếp được kết quả cũ (chạm sai 3 lần thì quay lại, nhờ thầy cô). Đây chỉ là cách nhận ra nhẹ nhàng cho trẻ 6–7 tuổi trên máy dùng chung, không phải bảo mật. **Kết thúc phiên học** xóa tên khỏi màn hình; máy chỉ nhớ tên lớp để điền sẵn. Dữ liệu học thử vẫn tách riêng. Đường dẫn cũ `#/chon-ban` tự chuyển về trang đầu.
 | `#/lam-bai/:id` | **Làm bài**: một câu mỗi lần, “Câu x/y”, nút Gợi ý, nút nghe đọc câu hỏi. Buddy không che câu hỏi. |
 | `#/ket-qua/:id` | **Kết quả**: số câu đúng, lời khen, kỹ năng làm tốt, gợi ý bài tiếp theo, nút **Luyện lại** / **Chọn bài khác**. Không xếp hạng, không chê. |
 | `#/phu-huynh` | **Góc phụ huynh & thầy cô**: kết quả từng bạn trên thiết bị này, kỹ năng, tải CSV, xóa dữ liệu, tình trạng đối chiếu nội dung |

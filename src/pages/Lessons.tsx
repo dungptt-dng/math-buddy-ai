@@ -1,7 +1,7 @@
 // Màn hình quan trọng nhất của học sinh: chọn bài để ôn luyện.
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
-import { KidError, KidLayout, Loading } from '../components/Kid';
+import { BUDDY_IMG, KidError, KidLayout, Loading } from '../components/Kid';
 import { LessonArt } from '../components/LessonArt';
 import * as engine from '../engine';
 import type { GameCard, LessonCard, Me } from '../types';
@@ -20,7 +20,7 @@ export default function Lessons() {
     setError(null);
     try {
       const me = engine.me();
-      if (!me) throw new engine.EngineError('no_learner', 'Con chưa chọn tên.');
+      if (!me) throw new engine.EngineError('no_learner', 'Con chưa vào học.');
       setData({ me, lessons: engine.listLessons(), games: engine.listGames() });
     } catch (e) {
       setError(e as engine.EngineError);
@@ -42,7 +42,7 @@ export default function Lessons() {
   if (error?.code === 'no_learner') {
     return (
       <KidLayout>
-        <KidError message="Con chưa chọn tên. Hãy bấm “Vào học” hoặc “Học thử” ở trang đầu nhé.">
+        <KidError message="Con chưa vào học. Hãy nhập tên và lớp ở trang đầu, hoặc bấm “Học thử” nhé.">
           <Link className="btn" to="/">
             Về trang chủ
           </Link>
@@ -57,11 +57,18 @@ export default function Lessons() {
     data.me.mode === 'trial' ? (
       <span className="chip trial">⭐ Học thử</span>
     ) : (
-      <Link className="chip" to="/chon-ban" title="Đổi bạn khác">
+      <Link className="chip" to="/" title="Về trang đầu">
         {data.me.profile.avatar} {data.me.profile.nickname}
+        {data.me.profile.className && ` · ${data.me.profile.className}`}
       </Link>
     )
   ) : undefined;
+
+  // Kết thúc phiên học: bạn sau dùng chung máy không thấy tên, bài của bạn trước.
+  const endSession = () => {
+    engine.signOut();
+    nav('/');
+  };
 
   return (
     <KidLayout right={chip}>
@@ -69,6 +76,29 @@ export default function Lessons() {
       {!data && !error && <Loading />}
       {data && (
         <>
+          <section className="hello-card">
+            <img src={BUDDY_IMG} alt="" />
+            <div className="hello-text">
+              {data.me.mode === 'profile' ? (
+                <>
+                  <p className="hello-title">Chào {data.me.profile.nickname}! Cùng Buddy ôn Toán nhé!</p>
+                  {data.me.profile.className && <p className="hello-sub">Lớp {data.me.profile.className}</p>}
+                </>
+              ) : (
+                <p className="hello-title">Chào con! Cùng Buddy học thử nhé!</p>
+              )}
+            </div>
+            <div className="hello-actions">
+              {data.me.mode === 'profile' && (
+                <Link className="btn white" to="/" state={{ edit: true }}>
+                  ✏️ Đổi thông tin
+                </Link>
+              )}
+              <button className="btn white" onClick={endSession}>
+                👋 {data.me.mode === 'profile' ? 'Kết thúc phiên học' : 'Kết thúc học thử'}
+              </button>
+            </div>
+          </section>
           {data.me.mode === 'trial' && data.me.notice && (
             <div className="notice trial" style={{ marginBottom: 8 }}>
               <span className="emoji">ℹ️</span>

@@ -67,6 +67,76 @@ test('tên trùng (không phân biệt hoa thường) bị từ chối, tên qu�
   assert.throws(() => engine.createProfile('   ', '🐰'), (e: engine.EngineError) => e.code === 'invalid');
 });
 
+test('tên và lớp: bỏ khoảng trắng thừa, chuẩn hóa lớp, từ chối ô trống hoặc ký tự lạ', () => {
+  assert.equal(engine.cleanName('   Minh    Anh  '), 'Minh Anh');
+  assert.equal(engine.cleanName('Nguyễn Thị Ánh'.normalize('NFD')), 'Nguyễn Thị Ánh');
+  assert.equal(engine.cleanClassName('  lớp 1a '), '1A');
+  assert.equal(engine.cleanClassName('Lớp1b'), '1B');
+  for (const bad of ['', '   ', '123', '<b>Minh</b>', 'Minh 😀', 'x'.repeat(21)]) {
+    assert.throws(() => engine.cleanName(bad), (e: engine.EngineError) => e.code === 'invalid', bad);
+  }
+  for (const bad of ['', '  ', 'lớp', '1A<script>', '1'.repeat(11), '!!']) {
+    assert.throws(() => engine.cleanClassName(bad), (e: engine.EngineError) => e.code === 'invalid', bad);
+  }
+});
+
+test('Bắt đầu học: bạn mới được tạo kèm lớp; vào lại phải đúng con vật; cùng tên khác lớp là bạn khác', () => {
+  const minh = engine.enterLearner(' Minh ', '1a', '🐸');
+  assert.deepEqual([minh.nickname, minh.className, minh.avatar], ['Minh', '1A', '🐸']);
+  assert.deepEqual(engine.me(), { mode: 'profile', profile: minh });
+  play({ lessonId: 'add-10' });
+  engine.signOut();
+  assert.equal(engine.me(), null);
+  assert.equal(engine.lastClassName(), '1A', 'chỉ nhớ lớp để điền sẵn');
+  assert.ok(!engine.lastClassName().includes('Minh'));
+
+  // Chỉ biết tên + lớp thì không xem được kết quả của Minh.
+  assert.throws(() => engine.enterLearner('minh', '1A', '🐱'), (e: engine.EngineError) => e.code === 'denied');
+  assert.equal(engine.me(), null);
+
+  assert.equal(engine.enterLearner('MINH', 'Lớp 1A', '🐸').id, minh.id);
+  assert.equal(engine.listLessons().find((l) => l.id === 'add-10')!.status, 'completed');
+
+  engine.signOut();
+  const other = engine.enterLearner('Minh', '1B', '🐱');
+  assert.notEqual(other.id, minh.id);
+  assert.ok(engine.listLessons().every((l) => l.status === 'new'), 'bạn khác không thấy kết quả của Minh');
+});
+
+test('Đổi thông tin: sửa tên/lớp, giữ kết quả; không trùng bạn khác', () => {
+  engine.enterLearner('Lan', '1A', '🐰');
+  engine.signOut();
+  const an = engine.enterLearner('An', '1A', '🐻');
+  play({ lessonId: 'add-10' });
+  assert.throws(() => engine.updateLearner('lan', '1a'), (e: engine.EngineError) => e.code === 'conflict');
+  const renamed = engine.updateLearner('  An   Nhiên ', '1c');
+  assert.deepEqual([renamed.id, renamed.nickname, renamed.className], [an.id, 'An Nhiên', '1C']);
+  assert.equal(engine.listLessons().find((l) => l.id === 'add-10')!.status, 'completed');
+  assert.ok(engine.exportCsv('profiles').includes('An Nhiên,1C,'));
+  engine.signOut();
+  assert.throws(() => engine.updateLearner('An', '1A'), (e: engine.EngineError) => e.code === 'no_learner');
+});
+
+test('bạn tạo từ bản cũ (chưa có lớp) được nhận lại khi đúng tên và con vật', () => {
+  const old = engine.createProfile('Bé Mèo', '🐱');
+  play({ lessonId: 'add-10' });
+  engine.signOut();
+  const back = engine.enterLearner('bé mèo', '1A', '🐱');
+  assert.equal(back.id, old.id);
+  assert.equal(back.className, '1A');
+  assert.equal(engine.listLessons().find((l) => l.id === 'add-10')!.status, 'completed');
+});
+
+test('học thử tách riêng: không gắn tên, kết thúc thì xóa', () => {
+  engine.enterLearner('Hoa', '1A', '🐼');
+  engine.signOut();
+  engine.startTrial();
+  play({ lessonId: 'add-10' });
+  assert.equal(engine.reports()[0].questionsDone, 0, 'kết quả học thử không vào hồ sơ của bạn nào');
+  engine.signOut();
+  assert.ok(!mem.get('mathbuddy.v1')!.includes('"owner":"trial"'));
+});
+
 test('điểm chính thức = đúng ngay lần đầu; đúng khi thử lại được ghi riêng; từ vựng tính riêng', () => {
   engine.createProfile('Bé Thỏ', '🐰');
   const add = LESSONS.find((l) => l.id === 'add-10')!;
@@ -305,14 +375,14 @@ test('trò chơi chỉ lấy câu Toán từ bài đã duyệt, đúng kỹ năn
 });
 
 test('Góc phụ huynh: kỹ năng dưới 5 câu ghi “chưa đủ dữ liệu”; CSV có BOM, chặn công thức', () => {
-  engine.createProfile('=Bé Na', '🦊');
+  engine.createProfile('-Bé Na', '🦊');
   play({ lessonId: 'length' });
   const r = engine.reports()[0];
   assert.equal(r.questionsDone, LESSONS.find((l) => l.id === 'length')!.questions.length);
   assert.ok(r.skills.every((s) => (s.answered < engine.MIN_EVIDENCE ? s.label === 'insufficient' : s.label === 'mastered')));
   const csv = engine.exportCsv('profiles');
   assert.equal(csv.charCodeAt(0), 0xfeff);
-  assert.ok(csv.includes("'=Bé Na"), 'ô bắt đầu bằng = được chặn');
+  assert.ok(csv.includes("'-Bé Na"), 'ô bắt đầu bằng - được chặn');
   assert.ok(engine.exportCsv('attempts').includes('Dài hơn, ngắn hơn'));
 });
 
