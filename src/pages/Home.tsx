@@ -1,8 +1,9 @@
 // Trang đầu: ảnh banner Math Buddy AI phủ toàn màn hình, nút Vào học / Học thử đặt nổi phía dưới.
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router';
 import * as engine from '../engine';
 import { speak, useSound } from '../speech';
+import { startMusic, stopMusic } from '../music';
 
 const BANNER = 'assets/home-banner.webp';
 
@@ -12,6 +13,13 @@ export default function Home() {
   const [me, setMe] = useState(engine.me);
   const [lessons] = useState(() => (me?.mode === 'profile' ? engine.listLessons() : null));
   const [error, setError] = useState('');
+
+  // Nhạc nền vui tươi chỉ ở trang đầu: tắt theo nút loa, nhỏ dần khi bé rời trang.
+  useEffect(() => {
+    if (!soundOn) return;
+    startMusic();
+    return stopMusic;
+  }, [soundOn]);
 
   const startTrial = () => {
     setError('');

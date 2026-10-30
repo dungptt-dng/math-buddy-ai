@@ -1,5 +1,6 @@
 // Âm thanh ngắn và đọc to (Web Speech API). Mọi thứ đều tùy chọn: không có thì app vẫn chạy bình thường.
 import { useSyncExternalStore } from 'react';
+import { duckMusic } from './music';
 
 const SOUND_KEY = 'mb.sound';
 let soundOn = (() => {
@@ -48,6 +49,8 @@ export function speak(text: string, lang: 'vi-VN' | 'en-US', force = false) {
   u.pitch = 1.1;
   const v = pickVoice(lang);
   if (v) u.voice = v;
+  u.onstart = () => duckMusic(true);
+  u.onend = u.onerror = () => duckMusic(false);
   // Chỉ một giọng đọc tại một thời điểm: dừng câu đang đọc trước khi đọc câu mới.
   window.speechSynthesis.cancel();
   window.speechSynthesis.speak(u);
@@ -55,6 +58,7 @@ export function speak(text: string, lang: 'vi-VN' | 'en-US', force = false) {
 
 export function stopSpeaking() {
   if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+  duckMusic(false);
 }
 
 /** Chờ tiếng hiệu ứng ngắn kết thúc rồi mới đọc, để hai âm thanh không chồng lên nhau. */
