@@ -449,6 +449,26 @@ a {
   margin: 0;
   width: 100%;
 }
+/* Thông tin giáo viên tạo app: nhỏ, gọn, không lấn nút học. */
+.splash-credit {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  column-gap: 8px;
+  max-width: 100%;
+  padding: 5px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--blue-ink);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: center;
+}
+.splash-credit span + span::before {
+  content: '·';
+  margin-right: 8px;
+}
 
 /* Màn hình ngang: ảnh phủ kín, lời chào lên góc trên (vùng trời) để không che chữ trong ảnh. */
 @media (min-aspect-ratio: 4/3) {
@@ -528,6 +548,14 @@ a {
   .splash-links {
     font-size: 13px;
     gap: 8px;
+  }
+  .splash-credit {
+    flex-direction: column;
+    padding: 3px 12px;
+    font-size: 12px;
+  }
+  .splash-credit span + span::before {
+    content: none;
   }
 }
 /* Màn hình thấp (điện thoại xoay ngang): nút gọn lại để không che ảnh. */

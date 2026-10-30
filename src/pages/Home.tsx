@@ -123,6 +123,13 @@ export default function Home() {
           <Link to="/phu-huynh">👨‍👩‍👧 Góc phụ huynh & thầy cô</Link>
           <Link to="/rieng-tu">🔒 Quyền riêng tư</Link>
         </nav>
+
+        <footer className="splash-credit">
+          <span>
+            Giáo viên: <b>Lê Thị Minh Thanh</b>
+          </span>
+          <span>Trường Tiểu học Huỳnh Ngọc Huệ - Phường Thanh Khê - Thành phố Đà Nẵng</span>
+        </footer>
       </main>
     </div>
   );
